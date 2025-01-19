@@ -23,3 +23,4 @@ using PointCloud = typename pcl::PointCloud<PointType>;
 using PointCloudPtr = typename PointCloud::Ptr;
 
 #endif
+

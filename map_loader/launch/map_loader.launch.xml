@@ -8,3 +8,4 @@
     <param name="map_path" value="$(var map_path)"/>
   </node>
 </launch>
+

@@ -266,3 +266,4 @@ bool MapMatcher::get_transform(
 
 #include <rclcpp_components/register_node_macro.hpp>
 RCLCPP_COMPONENTS_REGISTER_NODE(map_matcher::MapMatcher)
+
