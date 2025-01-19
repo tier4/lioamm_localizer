@@ -1,0 +1,12 @@
+<launch>
+  <arg name="map_path" default=""/>
+  <arg name="rviz_config" default="$(find-pkg-share lioamm_localizer)/rviz/lioamm_localizer.rviz"/>
+
+  <include file="$(find-pkg-share map_loader)/launch/map_loader.launch.xml">
+    <arg name="map_path" value="$(var map_path)"/>
+  </include>
+  <include file="$(find-pkg-share global_initializer)/launch/global_initializer.launch.py"/>
+  <include file="$(find-pkg-share map_matcher)/launch/map_matcher.launch.xml"/>
+
+  <node pkg="rviz2" exec="rviz2" name="rviz2" args="-d $(var rviz_config)"/>
+</launch>

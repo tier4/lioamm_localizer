@@ -1,0 +1,10 @@
+<launch>
+
+  <arg name="map_path" default="map.pcd"/>
+  <arg name="leaf_size" default="0.2"/>
+
+  <node pkg="map_loader" exec="map_loader_node" name="map_loader" output="screen">
+    <param name="leaf_size" value="$(var leaf_size)"/>
+    <param name="map_path" value="$(var map_path)"/>
+  </node>
+</launch>

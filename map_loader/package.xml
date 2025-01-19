@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>map_loader</name>
+  <version>0.0.0</version>
+  <description>The map_loader package</description>
+
+  <maintainer email="ryu.yamamoto@tier4.jp">RyuYamamoto</maintainer>
+
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>pcl_ros</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>lioamm_localizer_common</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
