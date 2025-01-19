@@ -1,0 +1,6 @@
+[submodule "thirdparty/ndt_omp"]
+	path = thirdparty/ndt_omp
+	url = https://github.com/tier4/ndt_omp.git
+[submodule "thirdparty/fast_gicp"]
+	path = thirdparty/fast_gicp
+	url = https://github.com/RyuYamamoto/fast_gicp

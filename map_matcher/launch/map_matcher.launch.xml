@@ -1,0 +1,14 @@
+<launch>
+  <arg name="map_matcher_config_path" default="$(find-pkg-share map_matcher)/config/map_matcher.params.yaml"/>
+
+  <node pkg="map_matcher" exec="map_matcher_node" name="map_matcher" output="screen">
+    <!--remap from="points_raw" to="/scan3d"/-->
+    <remap from="points_raw" to="/sensing/lidar/left_upper/pointcloud_raw"/>
+    <!--remap from="imu_raw" to="/imu"/-->
+    <remap from="imu_raw" to="/sensing/imu/tamagawa/imu_raw"/>
+    <param from="$(var map_matcher_config_path)"/>
+  </node>
+
+  <node pkg="rviz2" exec="rviz2" name="rviz2" args="-d $(find-pkg-share map_matcher)/rviz/map_matcher.rviz"/>
+</launch>
+
