@@ -1,0 +1,36 @@
+/**:
+  ros__parameters:
+    base_frame_id: base_link
+    map_frame_id: map
+
+    # Points Pre Processing
+    scan_voxel_size: 1.0
+    map_voxel_size: 0.25
+    crop_min_x: -1.0
+    crop_max_x: 1.0
+    crop_min_y: -1.0
+    crop_max_y: 1.0
+    crop_min_z: -1.0
+    crop_max_z: 1.0
+    min_distance: 0.001
+
+    # Scan Registration
+    max_correspondence_distance: 2.0
+    correspondence_randomness: 20
+    max_iteration: 32
+    omp_num_thread: 4
+    transformation_epsilon: 0.01
+
+    # ESKF
+    acc_noise: 0.02
+    gyro_noise: 0.005
+    acc_bias_noise: 0.0002
+    gyro_bias_noise: 0.0001
+    translation_noise: 1e-6
+    rotation_noise: 1e-6
+    gravity: 9.81
+    acc_bias: [0.0, 0.0, 0.0]
+    gyro_bias: [0.0, 0.0, 0.0]
+
+    keyframe_update_distance_threshold: 0.8
+    keyframe_update_yaw_threshold: 45.0

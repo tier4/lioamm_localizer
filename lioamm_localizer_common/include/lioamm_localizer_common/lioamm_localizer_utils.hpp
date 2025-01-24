@@ -87,6 +87,12 @@ inline Eigen::Matrix4f convert_transform_to_matrix(
 inline Eigen::Matrix3d skew_symmetric_matrix(const Eigen::Vector3d & vector)
 {
   Eigen::Matrix3d matrix;
+  // clang-format off
+  matrix <<
+    0.0, -vector.z(), vector.y(),
+    vector.z(), 0.0, -vector.x(),
+    -vector.y(), vector.x(), 0.0;
+  // clang-format on
   return matrix;
 }
 
@@ -101,7 +107,19 @@ inline Eigen::Transform<double, 3, Eigen::Affine> get_eigen_transform(
   return transform;
 }
 
+inline Eigen::Quaterniond convert_euler_to_quaternion(const Eigen::Vector3d & euler)
+{
+  Eigen::Quaterniond quaternion = Eigen::AngleAxisd(euler.z(), Eigen::Vector3d::UnitZ()) *
+                                  Eigen::AngleAxisd(euler.y(), Eigen::Vector3d::UnitY()) *
+                                  Eigen::AngleAxisd(euler.x(), Eigen::Vector3d::UnitX());
+  return quaternion;
+}
+
+inline Eigen::Matrix3d convert_euler_to_rotation_matrix(const Eigen::Vector3d & euler)
+{
+  return convert_euler_to_quaternion(euler).toRotationMatrix();
+}
+
 }  // namespace lioamm_localizer_utils
 
 #endif
-
