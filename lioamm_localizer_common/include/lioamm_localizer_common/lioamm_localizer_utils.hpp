@@ -22,6 +22,9 @@
 
 #include <tf2/convert.h>
 
+#include <deque>
+#include <numeric>
+
 namespace lioamm_localizer_utils
 {
 
@@ -107,17 +110,58 @@ inline Eigen::Transform<double, 3, Eigen::Affine> get_eigen_transform(
   return transform;
 }
 
+inline Eigen::Vector3d convert_matrix_to_euler(const Eigen::Matrix3d & matrix)
+{
+  Eigen::Quaterniond q(matrix);
+  return 2.0 * q.vec() / q.w();
+}
+
 inline Eigen::Quaterniond convert_euler_to_quaternion(const Eigen::Vector3d & euler)
 {
-  Eigen::Quaterniond quaternion = Eigen::AngleAxisd(euler.z(), Eigen::Vector3d::UnitZ()) *
-                                  Eigen::AngleAxisd(euler.y(), Eigen::Vector3d::UnitY()) *
-                                  Eigen::AngleAxisd(euler.x(), Eigen::Vector3d::UnitX());
-  return quaternion;
+  Eigen::AngleAxisd angle_axis(euler.norm(), euler.normalized());
+  return Eigen::Quaterniond(angle_axis);
+
+  // Eigen::Quaterniond quaternion = Eigen::AngleAxisd(euler.z(), Eigen::Vector3d::UnitZ()) *
+  //                                 Eigen::AngleAxisd(euler.y(), Eigen::Vector3d::UnitY()) *
+  //                                 Eigen::AngleAxisd(euler.x(), Eigen::Vector3d::UnitX());
+  // return quaternion;
 }
 
 inline Eigen::Matrix3d convert_euler_to_rotation_matrix(const Eigen::Vector3d & euler)
 {
   return convert_euler_to_quaternion(euler).toRotationMatrix();
+}
+
+template <typename T, typename D, typename E>
+inline T compute_mean(const D & data, E extractor)
+{
+  T sum = std::accumulate(
+    data.begin(), data.end(), T::Zero().eval(),
+    [&](const T & data, const typename D::value_type & element) -> T {
+      return data + extractor(element);
+    });
+
+  return sum / data.size();
+}
+
+template <typename T, typename D, typename E>
+std::tuple<T, T> compute_mean_and_covariance(const D & data, E extractor)
+{
+  const size_t size = data.size();
+
+  T mean = std::accumulate(
+    data.begin(), data.end(), T::Zero().eval(),
+    [&extractor](const T & sum, const auto & data) -> T { return sum + extractor(data); });
+  mean /= size;
+
+  T covariance = std::accumulate(
+    data.begin(), data.end(), T::Zero().eval(),
+    [&mean, &extractor](const T & sum, const auto & data) -> T {
+      return sum + (extractor(data) - mean).cwiseAbs2().eval();
+    });
+  covariance /= (size - 1);
+
+  return std::make_tuple(mean, covariance);
 }
 
 }  // namespace lioamm_localizer_utils

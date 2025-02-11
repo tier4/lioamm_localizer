@@ -135,6 +135,10 @@ void MapMatcher::callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr 
     return;
   }
 
+  const auto [predict_state, predict_bias] =
+    imu_integration_->predict(transformation_.cast<double>());
+  transformation_ = predict_state.pose().matrix().cast<float>();
+
   PointCloudPtr input_cloud(new PointCloud);
   PointCloudPtr base_to_sensor_points(new PointCloud);
   PointCloudPtr preprocessing_cloud(new PointCloud);
@@ -154,10 +158,9 @@ void MapMatcher::callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr 
   }
 
   transformation_ = ndt_->getFinalTransformation();
-
-  const auto [predict_state, predict_bias] =
-    imu_integration_->predict(transformation_.cast<double>());
-  transformation_ = predict_state.pose().matrix().cast<float>();
+  const double score_nvtl = ndt_->getNearestVoxelTransformationLikelihood();
+  const double score_tp = ndt_->getTransformationProbability();
+  std::cout << "NVTL: " << score_nvtl << " TP: " << score_tp << std::endl;
 
   geometry_msgs::msg::PoseStamped estimated_pose_msg;
   estimated_pose_msg.header.stamp = current_time_stamp;
@@ -266,4 +269,3 @@ bool MapMatcher::get_transform(
 
 #include <rclcpp_components/register_node_macro.hpp>
 RCLCPP_COMPONENTS_REGISTER_NODE(map_matcher::MapMatcher)
-

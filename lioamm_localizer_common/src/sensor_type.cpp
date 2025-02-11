@@ -12,14 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIOAMM_LOCALIZER_COMMON__POINT_TYPE_HPP_
-#define LIOAMM_LOCALIZER_COMMON__POINT_TYPE_HPP_
-
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-
-using PointType = typename pcl::PointXYZI;
-using PointCloud = typename pcl::PointCloud<PointType>;
-using PointCloudPtr = typename PointCloud::Ptr;
-
-#endif
+#include "lioamm_localizer_common/sensor_type.hpp"
