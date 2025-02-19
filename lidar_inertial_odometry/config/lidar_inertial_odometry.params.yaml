@@ -4,8 +4,8 @@
     map_frame_id: map
 
     # Points Pre Processing
-    scan_voxel_size: 0.5
-    map_voxel_size: 0.5
+    scan_voxel_size: 0.3
+    map_voxel_size: 0.3
     crop_min_x: -1.0
     crop_max_x: 1.0
     crop_min_y: -1.0
@@ -15,25 +15,21 @@
     min_distance: 0.001
 
     # Scan Registration
-    max_correspondence_distance: 2.0
+    max_correspondence_distance: 0.5
     correspondence_randomness: 20
-    max_iteration: 32
+    max_iteration: 100
     omp_num_thread: 4
     transformation_epsilon: 0.01
     resolution: 1.0
 
     # ESKF
-    acc_noise: 1e-5
-    gyro_noise: 1e-2
-    acc_bias_noise: 1e-4
-    gyro_bias_noise: 1e-6
-    translation_noise: 1e-6
-    rotation_noise: 1e-6
+    acc_noise: 0.05
+    gyro_noise: 0.02
+    acc_bias_noise: 1e-5
+    gyro_bias_noise: 1e-5
+    translation_noise: 1e-2
+    rotation_noise: 1e-2
     gravity: 9.80665
-    acc_bias: [0.0, 0.0, 0.0]
-    gyro_bias: [0.0, 0.0, 0.0]
-
-    imu_calibrated_time: 3.0
 
     translation_threshold: 0.8
-    rotation_threshold: 30.0
+    rotation_threshold: 45.0

@@ -56,6 +56,7 @@ private:
   void callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg);
   void callback_map(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
+  void callback_odom(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
   void callback_initial_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
 
   bool integrate_imu(const std_msgs::msg::Header::_stamp_type & sensor_header);
@@ -72,6 +73,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr points_subscriber_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscriber_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr map_subscriber_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr odom_subscriber_;
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
     initial_pose_subscriber_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_publisher_;
@@ -96,6 +98,7 @@ private:
   std::shared_ptr<pclomp::NormalDistributionsTransform<PointType, PointType>> ndt_;
 
   bool is_initialized_{false};
+  bool map_matching_fail_{false};
 
   std::deque<sensor_type::Imu> imu_queue_;
 
@@ -105,4 +108,3 @@ private:
 }  // namespace map_matcher
 
 #endif
-

@@ -41,8 +41,6 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_stamped_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr local_map_publisher_;
 
-  rclcpp::TimerBase::SharedPtr timer_;
-
   tf2_ros::Buffer tf_buffer_{get_clock()};
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
   std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;

@@ -68,8 +68,6 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
     "local_map", rclcpp::QoS{1}.transient_local());
 
   thread_ = std::make_shared<std::thread>(&LidarInertialOdometryNode::main_thread, this);
-  // timer_ = this->create_wall_timer(
-  //   std::chrono::milliseconds(50), std::bind(&LidarInertialOdometryNode::process, this));
 }
 
 LidarInertialOdometryNode::~LidarInertialOdometryNode()
@@ -99,22 +97,24 @@ void LidarInertialOdometryNode::process()
     return;
   }
 
+  // Predict
+  lio_->predict(measurement);
+
   // Measurement Update
-  if (!lio_->update(measurement.lidar_points)) {
+  if (!lio_->update(measurement)) {
     RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to update.");
     return;
   }
-
-  // Predict
-  lio_->predict(measurement.imu_queue);
 
   Eigen::Matrix4d estimated_pose = lio_->get_result();
 
   // Local map update
   if (lio_->update_local_map(estimated_pose, measurement.lidar_points)) {
-    const PointCloudPtr local_map = lio_->get_local_map();
+    PointCloudPtr transform_cloud(new PointCloud);
+    pcl::transformPointCloud(
+      *measurement.lidar_points.raw_points, *transform_cloud, estimated_pose);
     sensor_msgs::msg::PointCloud2 local_map_msg;
-    pcl::toROSMsg(*local_map, local_map_msg);
+    pcl::toROSMsg(*transform_cloud, local_map_msg);
     local_map_msg.header.frame_id = map_frame_id_;
     local_map_msg.header.stamp = now();
     local_map_publisher_->publish(local_map_msg);
@@ -150,7 +150,7 @@ void LidarInertialOdometryNode::callback_points(const sensor_msgs::msg::PointClo
   preprocess_points = lio_->preprocessing(base_to_sensor_cloud);
 
   sensor_type::Lidar new_points;
-  new_points.stamp = msg->header.stamp.sec + msg->header.stamp.nanosec / 1e9;
+  new_points.stamp = rclcpp::Time(msg->header.stamp).seconds();
   new_points.raw_points = base_to_sensor_cloud;
   new_points.preprocessing_points = preprocess_points;
 
@@ -159,23 +159,33 @@ void LidarInertialOdometryNode::callback_points(const sensor_msgs::msg::PointClo
 
 void LidarInertialOdometryNode::callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
-  geometry_msgs::msg::TransformStamped base_to_imu;
-  if (!get_transform(base_frame_id_, msg->header.frame_id, base_to_imu)) {
-    return;
-  }
+  // geometry_msgs::msg::TransformStamped base_to_imu;
+  // if (!get_transform(base_frame_id_, msg->header.frame_id, base_to_imu)) {
+  //   return;
+  // }
 
-  Eigen::Transform<double, 3, Eigen::Affine> transform =
-    lioamm_localizer_utils::get_eigen_transform(base_to_imu);
+  // Eigen::Transform<double, 3, Eigen::Affine> transform =
+  //   lioamm_localizer_utils::get_eigen_transform(base_to_imu);
+
+  static sensor_msgs::msg::Imu last_imu = *msg;
+  const double a = 0.8;
+  const double b = 1.0 - a;
+
+  sensor_msgs::msg::Imu imu_msg = *msg;
+  // imu_msg.linear_acceleration.x =
+  //   msg->linear_acceleration.x * a + last_imu.linear_acceleration.x * b;
+  // imu_msg.linear_acceleration.y =
+  //   msg->linear_acceleration.y * a + last_imu.linear_acceleration.y * b;
+  // imu_msg.linear_acceleration.z =
+  //   msg->linear_acceleration.z * a + last_imu.linear_acceleration.z * b;
+  last_imu = *msg;
 
   sensor_type::Imu imu_data;
-  imu_data.stamp = msg->header.stamp.sec + msg->header.stamp.nanosec / 1e9;
-  imu_data.linear_acceleration =
-    transform *
-    Eigen::Vector3d(
-      msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
-  imu_data.angular_velocity =
-    transform *
-    Eigen::Vector3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
+  imu_data.stamp = rclcpp::Time(imu_msg.header.stamp).seconds();
+  imu_data.linear_acceleration = Eigen::Vector3d(
+    imu_msg.linear_acceleration.x, imu_msg.linear_acceleration.y, imu_msg.linear_acceleration.z);
+  imu_data.angular_velocity = Eigen::Vector3d(
+    imu_msg.angular_velocity.x, imu_msg.angular_velocity.y, imu_msg.angular_velocity.z);
 
   lio_->insert_imu(imu_data);
 }

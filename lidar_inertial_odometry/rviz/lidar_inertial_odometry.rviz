@@ -5,9 +5,10 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /TF1/Frames1
+        - /map1
         - /map1/Topic1
       Splitter Ratio: 0.5
-    Tree Height: 814
+    Tree Height: 363
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -25,7 +26,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: sensor points
+    SyncSource: map
 Visualization Manager:
   Class: ""
   Displays:
@@ -52,46 +53,12 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        camera_accel_frame:
+        PandarXT-32:
           Value: true
-        camera_accel_optical_frame:
-          Value: true
-        camera_aligned_depth_to_color_frame:
-          Value: true
-        camera_aligned_depth_to_infra1_frame:
-          Value: true
-        camera_color_frame:
-          Value: true
-        camera_color_optical_frame:
-          Value: true
-        camera_depth_frame:
-          Value: true
-        camera_depth_optical_frame:
-          Value: true
-        camera_gyro_frame:
-          Value: true
-        camera_gyro_optical_frame:
-          Value: true
-        camera_infra1_frame:
-          Value: true
-        camera_infra1_optical_frame:
-          Value: true
-        camera_infra2_frame:
-          Value: true
-        camera_infra2_optical_frame:
-          Value: true
-        camera_link:
+        base_link:
           Value: true
         map:
-          Value: false
-        os1_imu:
           Value: true
-        os1_lidar:
-          Value: true
-        os1_sensor:
-          Value: true
-        viewer:
-          Value: false
       Marker Scale: 6
       Name: TF
       Show Arrows: true
@@ -99,13 +66,9 @@ Visualization Manager:
       Show Names: true
       Tree:
         map:
-          os1_sensor:
-            os1_imu:
+          base_link:
+            PandarXT-32:
               {}
-            os1_lidar:
-              {}
-          viewer:
-            {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -189,7 +152,7 @@ Visualization Manager:
         Value: /pose
       Value: true
     - Class: rviz_default_plugins/Image
-      Enabled: true
+      Enabled: false
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -201,8 +164,8 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /camera/infra2/image_rect_raw
-      Value: true
-    - Alpha: 1
+      Value: false
+    - Alpha: 0.10000000149011612
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
         Max Value: 38.00143814086914
@@ -213,13 +176,13 @@ Visualization Manager:
       Class: rviz_default_plugins/PointCloud2
       Color: 255; 255; 255
       Color Transformer: Intensity
-      Decay Time: 0
+      Decay Time: 9999
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 798.4473876953125
+      Max Intensity: 255
       Min Color: 0; 0; 0
-      Min Intensity: 3.7912023067474365
+      Min Intensity: 0
       Name: map
       Position Transformer: XYZ
       Selectable: false
@@ -282,35 +245,35 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 125.64208984375
+      Distance: 21.567115783691406
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 6.6433424949646
-        Y: 23.04850959777832
-        Z: -0.35899618268013
+        X: 2.780168294906616
+        Y: 7.942277908325195
+        Z: -0.03019440546631813
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6047961711883545
+      Pitch: 0.25979748368263245
       Target Frame: map
       Value: Orbit (rviz_default_plugins)
-      Yaw: 4.672393321990967
+      Yaw: 4.8373918533325195
     Saved: ~
 Window Geometry:
   Displays:
-    collapsed: false
-  Height: 1330
-  Hide Left Dock: false
-  Hide Right Dock: true
+    collapsed: true
+  Height: 1376
+  Hide Left Dock: true
+  Hide Right Dock: false
   Image:
-    collapsed: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000023d00000494fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000003b9000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006501000003fc000000d50000002800ffffff000000010000010f00000494fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d00000494000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000006b80000003efc0100000002fb0000000800540069006d00650100000000000006b8000002fb00fffffffb0000000800540069006d00650100000000000004500000000000000000000004750000049400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+    collapsed: true
+  QMainWindow State: 000000ff00000000fd000000040000000000000156000004c2fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073000000003d0000021f000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006500000002620000029d0000002800ffffff000000010000010f000004c2fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d000004c2000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000006a10000003efc0100000002fb0000000800540069006d00650100000000000006a1000002fb00fffffffb0000000800540069006d006501000000000000045000000000000000000000058c000004c200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -318,7 +281,7 @@ Window Geometry:
   Tool Properties:
     collapsed: false
   Views:
-    collapsed: true
-  Width: 1720
+    collapsed: false
+  Width: 1697
   X: 46
   Y: 27

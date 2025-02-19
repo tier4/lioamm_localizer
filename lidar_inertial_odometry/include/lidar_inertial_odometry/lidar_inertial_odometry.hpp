@@ -12,6 +12,7 @@
 #include <pcl/filters/crop_box.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pclomp/ndt_omp.h>
 
 class LidarInertialOdometry
 {
@@ -61,8 +62,9 @@ public:
 
   void initialize(const sensor_type::Measurement & measurement);
 
-  void predict(const std::deque<sensor_type::Imu> & imu_queue);
-  bool update(const sensor_type::Lidar & lidar_points);
+  void predict(sensor_type::Imu imu) { eskf_->predict(imu); }
+  void predict(const sensor_type::Measurement & measurement);
+  bool update(const sensor_type::Measurement & measurement);
 
   bool scan_matching(
     const PointCloudPtr input_cloud_ptr, const Eigen::Matrix4d & initial_guess,
@@ -87,7 +89,7 @@ public:
 private:
   std::shared_ptr<ImuInitializer> imu_;
   std::shared_ptr<eskf::ESKF> eskf_;
-  std::shared_ptr<fast_gicp::FastVGICP<PointType, PointType>> registration_;
+  std::shared_ptr<fast_gicp::FastGICP<PointType, PointType>> registration_;
 
   ConcurrentQueue<sensor_type::Lidar> lidar_buffer_;
   ConcurrentQueue<sensor_type::Imu> imu_buffer_;
@@ -108,6 +110,8 @@ private:
   Eigen::Matrix4d transformation_;
 
   std::vector<submap::Submap> submaps_;
+
+  std::shared_ptr<sensor_type::Imu> last_imu_;
 };
 
 #endif

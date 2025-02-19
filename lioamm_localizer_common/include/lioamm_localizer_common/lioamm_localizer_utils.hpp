@@ -112,19 +112,14 @@ inline Eigen::Transform<double, 3, Eigen::Affine> get_eigen_transform(
 
 inline Eigen::Vector3d convert_matrix_to_euler(const Eigen::Matrix3d & matrix)
 {
-  Eigen::Quaterniond q(matrix);
-  return 2.0 * q.vec() / q.w();
+  Eigen::AngleAxisd angle_axis(matrix);
+  return angle_axis.angle() * angle_axis.axis();
 }
 
 inline Eigen::Quaterniond convert_euler_to_quaternion(const Eigen::Vector3d & euler)
 {
   Eigen::AngleAxisd angle_axis(euler.norm(), euler.normalized());
   return Eigen::Quaterniond(angle_axis);
-
-  // Eigen::Quaterniond quaternion = Eigen::AngleAxisd(euler.z(), Eigen::Vector3d::UnitZ()) *
-  //                                 Eigen::AngleAxisd(euler.y(), Eigen::Vector3d::UnitY()) *
-  //                                 Eigen::AngleAxisd(euler.x(), Eigen::Vector3d::UnitX());
-  // return quaternion;
 }
 
 inline Eigen::Matrix3d convert_euler_to_rotation_matrix(const Eigen::Vector3d & euler)

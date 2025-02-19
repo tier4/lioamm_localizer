@@ -24,7 +24,7 @@ public:
     Eigen::Vector3d gyro_bias = Eigen::Vector3d::Zero();
     Eigen::Vector3d acc_bias = Eigen::Vector3d::Zero();
     Eigen::Vector3d gravity = Eigen::Vector3d::Zero();
-    Eigen::Matrix<double, 18, 18> P = 1e-4 * Eigen::Matrix<double, 18, 18>::Identity();
+    Eigen::Matrix<double, 18, 18> P = Eigen::Matrix<double, 18, 18>::Identity() * 1e-4;
 
     State() {}
 
@@ -44,14 +44,14 @@ public:
     double rotation_noise;
   };
 
-  ESKF(const ESKFConfig config, const int queue_size);
+  ESKF(const ESKFConfig config);
   ~ESKF();
 
   void initialize(
     const Eigen::Matrix4d initial_pose, const Eigen::Vector<double, 6> bias,
     const Eigen::Vector3d gravity, const double stamp);
 
-  void predict(sensor_type::Imu imu_measurement);
+  void predict(const sensor_type::Imu imu_measurement);
   Eigen::Matrix4d update(sensor_type::Pose & pose_measurement);
 
   void set_Q(const Eigen::Vector3d & acc_cov, const Eigen::Vector3d & gyro_cov);
@@ -69,7 +69,6 @@ private:
 
   ESKFConfig config_;
 
-  boost::circular_buffer<State> state_buffer_;
   State state_;
 };
 

@@ -40,8 +40,11 @@ struct Pose
 
 struct Measurement
 {
+  double lidar_start_time;
+  double lidar_end_time;
   sensor_type::Lidar lidar_points;
   std::deque<sensor_type::Imu> imu_queue;
+  std::deque<sensor_type::Pose> map_pose_queue;
 };
 
 }  // namespace sensor_type
