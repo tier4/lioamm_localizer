@@ -77,12 +77,14 @@ MapMatcher::MapMatcher(const rclcpp::NodeOptions & options)
   map_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "map", rclcpp::QoS{1}.transient_local(),
     std::bind(&MapMatcher::callback_map, this, std::placeholders::_1));
+  odom_subscriber_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
+    "lidar_odometry", 10, std::bind(&MapMatcher::callback_odom, this, std::placeholders::_1));
   initial_pose_subscriber_ =
     this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
       "initialpose_3d", 5,
       std::bind(&MapMatcher::callback_initial_pose, this, std::placeholders::_1));
 
-  pose_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 10);
+  pose_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("map_pose", 10);
 }
 
 MapMatcher::~MapMatcher()
@@ -129,11 +131,15 @@ void MapMatcher::callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr 
     return;
   }
 
-  const auto current_time_stamp = msg->header.stamp;
-  if (!integrate_imu(current_time_stamp)) {
+  const auto lidar_time_stamp = msg->header.stamp;
+  if (!integrate_imu(lidar_time_stamp)) {
     RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to integrate imu measurement.");
     return;
   }
+
+  const auto [predict_state, predict_bias] =
+    imu_integration_->predict(transformation_.cast<double>());
+  transformation_ = predict_state.pose().matrix().cast<float>();
 
   PointCloudPtr input_cloud(new PointCloud);
   PointCloudPtr base_to_sensor_points(new PointCloud);
@@ -151,16 +157,26 @@ void MapMatcher::callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr 
   ndt_->align(*aligned_cloud, transformation_);
   if (!ndt_->hasConverged()) {
     RCLCPP_ERROR_STREAM(this->get_logger(), "Not Converged.");
+    return;
   }
 
   transformation_ = ndt_->getFinalTransformation();
-
-  const auto [predict_state, predict_bias] =
-    imu_integration_->predict(transformation_.cast<double>());
-  transformation_ = predict_state.pose().matrix().cast<float>();
-
+  const double score_nvtl = ndt_->getNearestVoxelTransformationLikelihood();
+  const double score_tp = ndt_->getTransformationProbability();
+  if (score_tp < 3.0) {
+    RCLCPP_ERROR_STREAM(this->get_logger(), "Score is lower than threshold.");
+    if (!map_matching_fail_) {
+      map_matching_fail_ = true;
+    } else {
+      if (map_matching_fail_) {
+        map_matching_fail_ = false;
+      }
+    }
+    // return;
+  }
+  const auto current_time_stamp = this->now();
   geometry_msgs::msg::PoseStamped estimated_pose_msg;
-  estimated_pose_msg.header.stamp = current_time_stamp;
+  estimated_pose_msg.header.stamp = lidar_time_stamp;
   estimated_pose_msg.header.frame_id = map_frame_id_;
   estimated_pose_msg.pose = lioamm_localizer_utils::convert_matrix_to_pose(transformation_);
   pose_publisher_->publish(estimated_pose_msg);
@@ -210,6 +226,13 @@ void MapMatcher::callback_map(const sensor_msgs::msg::PointCloud2::SharedPtr msg
   voxel_grid_map_.filter(*map_);
 
   ndt_->setInputTarget(map_raw);
+}
+
+void MapMatcher::callback_odom(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+{
+  if (map_matching_fail_) {
+    transformation_ = lioamm_localizer_utils::convert_pose_to_matrix(msg->pose);
+  }
 }
 
 void MapMatcher::callback_initial_pose(
@@ -266,4 +289,3 @@ bool MapMatcher::get_transform(
 
 #include <rclcpp_components/register_node_macro.hpp>
 RCLCPP_COMPONENTS_REGISTER_NODE(map_matcher::MapMatcher)
-

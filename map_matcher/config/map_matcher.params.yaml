@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    base_frame_id: base_link
+    base_frame_id: os1_sensor 
     map_frame_id: map
 
     scan_voxel_size: 2.0

@@ -22,6 +22,9 @@
 
 #include <tf2/convert.h>
 
+#include <deque>
+#include <numeric>
+
 namespace lioamm_localizer_utils
 {
 
@@ -87,6 +90,12 @@ inline Eigen::Matrix4f convert_transform_to_matrix(
 inline Eigen::Matrix3d skew_symmetric_matrix(const Eigen::Vector3d & vector)
 {
   Eigen::Matrix3d matrix;
+  // clang-format off
+  matrix <<
+    0.0, -vector.z(), vector.y(),
+    vector.z(), 0.0, -vector.x(),
+    -vector.y(), vector.x(), 0.0;
+  // clang-format on
   return matrix;
 }
 
@@ -101,7 +110,55 @@ inline Eigen::Transform<double, 3, Eigen::Affine> get_eigen_transform(
   return transform;
 }
 
+inline Eigen::Vector3d convert_matrix_to_euler(const Eigen::Matrix3d & matrix)
+{
+  Eigen::AngleAxisd angle_axis(matrix);
+  return angle_axis.angle() * angle_axis.axis();
+}
+
+inline Eigen::Quaterniond convert_euler_to_quaternion(const Eigen::Vector3d & euler)
+{
+  Eigen::AngleAxisd angle_axis(euler.norm(), euler.normalized());
+  return Eigen::Quaterniond(angle_axis);
+}
+
+inline Eigen::Matrix3d convert_euler_to_rotation_matrix(const Eigen::Vector3d & euler)
+{
+  return convert_euler_to_quaternion(euler).toRotationMatrix();
+}
+
+template <typename T, typename D, typename E>
+inline T compute_mean(const D & data, E extractor)
+{
+  T sum = std::accumulate(
+    data.begin(), data.end(), T::Zero().eval(),
+    [&](const T & data, const typename D::value_type & element) -> T {
+      return data + extractor(element);
+    });
+
+  return sum / data.size();
+}
+
+template <typename T, typename D, typename E>
+std::tuple<T, T> compute_mean_and_covariance(const D & data, E extractor)
+{
+  const size_t size = data.size();
+
+  T mean = std::accumulate(
+    data.begin(), data.end(), T::Zero().eval(),
+    [&extractor](const T & sum, const auto & data) -> T { return sum + extractor(data); });
+  mean /= size;
+
+  T covariance = std::accumulate(
+    data.begin(), data.end(), T::Zero().eval(),
+    [&mean, &extractor](const T & sum, const auto & data) -> T {
+      return sum + (extractor(data) - mean).cwiseAbs2().eval();
+    });
+  covariance /= (size - 1);
+
+  return std::make_tuple(mean, covariance);
+}
+
 }  // namespace lioamm_localizer_utils
 
 #endif
-
