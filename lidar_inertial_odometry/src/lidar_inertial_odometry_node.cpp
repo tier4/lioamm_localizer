@@ -173,33 +173,23 @@ void LidarInertialOdometryNode::callback_points(const sensor_msgs::msg::PointClo
 
 void LidarInertialOdometryNode::callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
-  // geometry_msgs::msg::TransformStamped base_to_imu;
-  // if (!get_transform(base_frame_id_, msg->header.frame_id, base_to_imu)) {
-  //   return;
-  // }
+  geometry_msgs::msg::TransformStamped base_to_imu;
+  if (!get_transform(base_frame_id_, msg->header.frame_id, base_to_imu)) {
+    return;
+  }
 
-  // Eigen::Transform<double, 3, Eigen::Affine> transform =
-  //   lioamm_localizer_utils::get_eigen_transform(base_to_imu);
-
-  static sensor_msgs::msg::Imu last_imu = *msg;
-  const double a = 0.8;
-  const double b = 1.0 - a;
-
-  sensor_msgs::msg::Imu imu_msg = *msg;
-  // imu_msg.linear_acceleration.x =
-  //   msg->linear_acceleration.x * a + last_imu.linear_acceleration.x * b;
-  // imu_msg.linear_acceleration.y =
-  //   msg->linear_acceleration.y * a + last_imu.linear_acceleration.y * b;
-  // imu_msg.linear_acceleration.z =
-  //   msg->linear_acceleration.z * a + last_imu.linear_acceleration.z * b;
-  last_imu = *msg;
+  Eigen::Transform<double, 3, Eigen::Affine> transform =
+    lioamm_localizer_utils::get_eigen_transform(base_to_imu);
 
   sensor_type::Imu imu_data;
-  imu_data.stamp = rclcpp::Time(imu_msg.header.stamp).seconds();
-  imu_data.linear_acceleration = Eigen::Vector3d(
-    imu_msg.linear_acceleration.x, imu_msg.linear_acceleration.y, imu_msg.linear_acceleration.z);
-  imu_data.angular_velocity = Eigen::Vector3d(
-    imu_msg.angular_velocity.x, imu_msg.angular_velocity.y, imu_msg.angular_velocity.z);
+  imu_data.stamp = rclcpp::Time(msg->header.stamp).seconds();
+  imu_data.linear_acceleration =
+    transform *
+    Eigen::Vector3d(
+      msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
+  imu_data.angular_velocity =
+    transform *
+    Eigen::Vector3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
 
   lio_->insert_imu(imu_data);
 }
