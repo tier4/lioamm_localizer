@@ -67,6 +67,8 @@ public:
       // estimate initial imu gravity orientation
       gravity_vector_ = -acc_mean / acc_mean.norm() * gravity_;
 
+      imu_scale_ = gravity_ / acc_mean.norm();
+
       auto [acc_mean_with_gravity, acc_cov_with_gravity] =
         lioamm_localizer_utils::compute_mean_and_covariance<Eigen::Vector3d>(
           imu_buffer_, [this](const sensor_type::Imu & imu) {
@@ -89,6 +91,7 @@ public:
   Eigen::Vector3d get_gyro_cov() { return gyro_cov_; }
   Eigen::Vector3d get_gravity() { return gravity_vector_; }
   Eigen::Matrix3d get_initial_orientation() { return initial_orientation_; }
+  double get_imu_scale() { return imu_scale_; }
 
   void clear()
   {
@@ -112,6 +115,7 @@ private:
   Eigen::Vector3d gyro_cov_;
   Eigen::Vector3d gravity_vector_;
   Eigen::Matrix3d initial_orientation_;
+  double imu_scale_;
 };
 
 #endif

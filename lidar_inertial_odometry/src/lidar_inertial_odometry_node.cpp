@@ -80,6 +80,8 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
     this->create_publisher<geometry_msgs::msg::PoseStamped>("pose_stamped", 10);
   local_map_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "local_map", rclcpp::QoS{1}.transient_local());
+  deskew_scan_publisher_ =
+    this->create_publisher<sensor_msgs::msg::PointCloud2>("deskew_scan", rclcpp::SensorDataQoS());
 
   thread_ = std::make_shared<std::thread>(&LidarInertialOdometryNode::main_thread, this);
 }
@@ -128,13 +130,24 @@ void LidarInertialOdometryNode::process()
     pcl::transformPointCloud(
       *measurement.lidar_points.raw_points, *transform_cloud, estimated_pose);
     sensor_msgs::msg::PointCloud2 local_map_msg;
-    pcl::toROSMsg(*transform_cloud, local_map_msg);
+    PointCloudPtr local_map = lio_->get_local_map();
+    pcl::toROSMsg(*local_map, local_map_msg);
     local_map_msg.header.frame_id = map_frame_id_;
     local_map_msg.header.stamp = now();
     local_map_publisher_->publish(local_map_msg);
   }
 
-  const auto current_time_stamp = this->now();
+  const auto current_time_stamp = from_sec(measurement.lidar_points.stamp);
+
+  PointCloudPtr deskew_cloud(new PointCloud);
+  pcl::transformPointCloud(
+    *measurement.lidar_points.raw_points, *deskew_cloud, estimated_pose.cast<float>());
+  sensor_msgs::msg::PointCloud2 deskew_cloud_msg;
+  pcl::toROSMsg(*deskew_cloud, deskew_cloud_msg);
+  deskew_cloud_msg.header.frame_id = base_frame_id_;
+  deskew_cloud_msg.header.stamp = current_time_stamp;
+  deskew_scan_publisher_->publish(deskew_cloud_msg);
+
   geometry_msgs::msg::PoseStamped estimated_pose_msg;
   estimated_pose_msg.header.frame_id = map_frame_id_;
   estimated_pose_msg.header.stamp = current_time_stamp;
@@ -149,6 +162,32 @@ void LidarInertialOdometryNode::callback_points(const sensor_msgs::msg::PointClo
 {
   PointCloudPtr cloud(new PointCloud);
   pcl::fromROSMsg(*msg, *cloud);
+
+  double scan_duration = 0.0;
+  auto find_timestamp_field = [&msg]() -> std::string_view {
+    constexpr std::array<std::string_view, 4> candidate_fields = {
+      "t", "time", "timestamp", "time_stamp"};
+    auto it = std::find_if(msg->fields.begin(), msg->fields.end(), [&](const auto & field) {
+      return std::find(candidate_fields.begin(), candidate_fields.end(), field.name) !=
+             candidate_fields.end();
+    });
+    return (it != msg->fields.end()) ? it->name : std::string_view{};
+  };
+
+  std::string_view timestamp_field = find_timestamp_field();
+  if (!timestamp_field.empty()) {
+    sensor_msgs::PointCloud2ConstIterator<double> t_iter(*msg, std::string(timestamp_field));
+
+    std::vector<double> timestamps;
+    for (; t_iter != t_iter.end(); ++t_iter) {
+      double timestamp = *t_iter;
+      timestamps.emplace_back(timestamp * 1e-6);
+    }
+    std::sort(std::execution::par, timestamps.begin(), timestamps.end());
+    const double sensor_start_stamp = timestamps.front();
+    const double sensor_end_stamp = timestamps.back();
+    scan_duration = (sensor_end_stamp - sensor_start_stamp);
+  }
 
   geometry_msgs::msg::TransformStamped base_to_sensor;
   if (!get_transform(base_frame_id_, msg->header.frame_id, base_to_sensor)) {
@@ -165,6 +204,8 @@ void LidarInertialOdometryNode::callback_points(const sensor_msgs::msg::PointClo
 
   sensor_type::Lidar new_points;
   new_points.stamp = rclcpp::Time(msg->header.stamp).seconds();
+  new_points.lidar_start_time = new_points.stamp;
+  new_points.lidar_end_time = new_points.lidar_start_time + scan_duration;
   new_points.raw_points = base_to_sensor_cloud;
   new_points.preprocessing_points = preprocess_points;
 

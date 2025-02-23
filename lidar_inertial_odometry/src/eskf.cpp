@@ -26,10 +26,10 @@ ESKF::ESKF(ESKFConfig config) : config_(config)
 
   Qi_ = Eigen::Matrix<double, 12, 12>::Identity();
 
-  Qi_.block<3, 3>(0, 0) = std::pow(config_.acc_noise, 2) * Eigen::Matrix3d::Identity();
-  Qi_.block<3, 3>(3, 3) = std::pow(config_.gyro_noise, 2) * Eigen::Matrix3d::Identity();
-  Qi_.block<3, 3>(6, 6) = std::pow(config_.acc_bias_noise, 2) * Eigen::Matrix3d::Identity();
-  Qi_.block<3, 3>(9, 9) = std::pow(config_.gyro_bias_noise, 2) * Eigen::Matrix3d::Identity();
+  Qi_.block<3, 3>(0, 0) = std::pow(config_.acc_noise, 1) * Eigen::Matrix3d::Identity();
+  Qi_.block<3, 3>(3, 3) = std::pow(config_.gyro_noise, 1) * Eigen::Matrix3d::Identity();
+  Qi_.block<3, 3>(6, 6) = std::pow(config_.acc_bias_noise, 1) * Eigen::Matrix3d::Identity();
+  Qi_.block<3, 3>(9, 9) = std::pow(config_.gyro_bias_noise, 1) * Eigen::Matrix3d::Identity();
 
   V_ = Eigen::Matrix<double, 6, 6>::Zero();
   Eigen::Matrix<double, 6, 1> noise;

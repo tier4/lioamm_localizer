@@ -23,12 +23,15 @@
 
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf2/convert.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
+
+#include <execution>
 
 class LidarInertialOdometryNode : public rclcpp::Node
 {
@@ -46,6 +49,19 @@ public:
     const geometry_msgs::msg::Pose pose, const rclcpp::Time stamp, const std::string frame_id,
     const std::string child_frame_id);
 
+  inline rclcpp::Time from_sec(const double timestamp)
+  {
+    const int seconds = static_cast<int>(timestamp);
+    const int nanoseconds = static_cast<int>((timestamp - seconds * 1e9));
+
+    return rclcpp::Time(seconds, nanoseconds);
+  }
+
+  inline double to_sec(const std_msgs::msg::Header & header)
+  {
+    return header.stamp.sec + header.stamp.nanosec / 1e9;
+  }
+
   void main_thread();
   void process();
 
@@ -54,6 +70,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscriber_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_stamped_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr local_map_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr deskew_scan_publisher_;
 
   tf2_ros::Buffer tf_buffer_{get_clock()};
   tf2_ros::TransformListener tf_listener_{tf_buffer_};

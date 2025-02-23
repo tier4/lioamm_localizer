@@ -17,6 +17,7 @@
 
 #include "lidar_inertial_odometry/eskf.hpp"
 #include "lidar_inertial_odometry/imu_initializer.hpp"
+#include "lidar_inertial_odometry/map_mananger.hpp"
 #include "lidar_inertial_odometry/submap.hpp"
 #include "lioamm_localizer_common/concurrent_queue.hpp"
 #include "lioamm_localizer_common/sensor_type.hpp"
@@ -77,7 +78,7 @@ public:
   void initialize(const sensor_type::Measurement & measurement);
 
   void predict(sensor_type::Imu imu) { eskf_->predict(imu); }
-  void predict(const sensor_type::Measurement & measurement);
+  void predict(sensor_type::Measurement & measurement);
   bool update(const sensor_type::Measurement & measurement);
 
   bool scan_matching(
@@ -103,7 +104,8 @@ public:
 private:
   std::shared_ptr<ImuInitializer> imu_;
   std::shared_ptr<eskf::ESKF> eskf_;
-  std::shared_ptr<fast_gicp::FastGICP<PointType, PointType>> registration_;
+  std::shared_ptr<MapManager> map_manager_;
+  std::shared_ptr<fast_gicp::FastVGICP<PointType, PointType>> registration_;
 
   ConcurrentQueue<sensor_type::Lidar> lidar_buffer_;
   ConcurrentQueue<sensor_type::Imu> imu_buffer_;
@@ -126,6 +128,7 @@ private:
   std::vector<submap::Submap> submaps_;
 
   std::shared_ptr<sensor_type::Imu> last_imu_;
+  std::shared_ptr<sensor_type::Lidar> last_sensor_points_;
 };
 
 #endif
