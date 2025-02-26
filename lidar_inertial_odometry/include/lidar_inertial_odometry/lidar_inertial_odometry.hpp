@@ -23,6 +23,7 @@
 #include "lioamm_localizer_common/sensor_type.hpp"
 
 #include <fast_gicp/gicp/fast_vgicp.hpp>
+#include <sophus/se3.hpp>
 
 #include <pcl/filters/crop_box.h>
 #include <pcl/filters/voxel_grid.h>
@@ -45,6 +46,8 @@ public:
     // Local Map
     double translation_threshold;
     double rotation_threshold;
+    double voxel_map_resolution;
+    double map_removal_distance;
 
     // ESKF
     double acc_noise;
@@ -54,6 +57,9 @@ public:
     double translation_noise;
     double rotation_noise;
     double gravity;
+
+    // IMU
+    std::size_t imu_calibration_queue_size;
   };
 
   LidarInertialOdometry(LioConfig config = LioConfig());
@@ -78,7 +84,7 @@ public:
   void initialize(const sensor_type::Measurement & measurement);
 
   void predict(sensor_type::Imu imu) { eskf_->predict(imu); }
-  void predict(sensor_type::Measurement & measurement);
+  std::vector<Sophus::SE3d> predict(sensor_type::Measurement & measurement);
   bool update(const sensor_type::Measurement & measurement);
 
   bool scan_matching(
@@ -105,7 +111,7 @@ private:
   std::shared_ptr<ImuInitializer> imu_;
   std::shared_ptr<eskf::ESKF> eskf_;
   std::shared_ptr<MapManager> map_manager_;
-  std::shared_ptr<fast_gicp::FastVGICP<PointType, PointType>> registration_;
+  std::shared_ptr<fast_gicp::FastGICP<PointType, PointType>> registration_;
 
   ConcurrentQueue<sensor_type::Lidar> lidar_buffer_;
   ConcurrentQueue<sensor_type::Imu> imu_buffer_;

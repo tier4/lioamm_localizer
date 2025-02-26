@@ -18,13 +18,13 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
 : config_(config), transformation_(Eigen::Matrix4d::Identity())
 {
   // Registration
-  registration_ = std::make_shared<fast_gicp::FastVGICP<PointType, PointType>>();
-  registration_->setResolution(config.resolution);
+  registration_ = std::make_shared<fast_gicp::FastGICP<PointType, PointType>>();
+  // registration_->setResolution(config.resolution);
   registration_->setMaxCorrespondenceDistance(config.max_correspondence_distance);
   registration_->setCorrespondenceRandomness(config.correspondence_randomness);
   registration_->setTransformationEpsilon(config.transformation_epsilon);
   registration_->setMaximumIterations(config.max_iteration);
-  registration_->setNeighborSearchMethod(fast_gicp::NeighborSearchMethod::DIRECT7);
+  // registration_->setNeighborSearchMethod(fast_gicp::NeighborSearchMethod::DIRECT7);
   registration_->setNumThreads(config.omp_num_thread);
 
   // ESKF
@@ -38,10 +38,11 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
   eskf_ = std::make_shared<eskf::ESKF>(eskf_config);
 
   // IMU Initializer
-  imu_ = std::make_shared<ImuInitializer>(300, config.gravity);
+  imu_ = std::make_shared<ImuInitializer>(config.imu_calibration_queue_size, config.gravity);
 
   // Map Manager
-  map_manager_ = std::make_shared<MapManager>(0.25, 100.0);
+  map_manager_ =
+    std::make_shared<MapManager>(config.voxel_map_resolution, config.map_removal_distance);
 
   local_map_.reset(new PointCloud);
   keyframe_point_.reset(new PointCloud);
@@ -101,12 +102,17 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
   }
 }
 
-void LidarInertialOdometry::predict(sensor_type::Measurement & measurement)
+std::vector<Sophus::SE3d> LidarInertialOdometry::predict(sensor_type::Measurement & measurement)
 {
+  std::vector<Sophus::SE3d> imu_states;
   for (auto & imu : measurement.imu_queue) {
     imu.linear_acceleration *= imu_->get_imu_scale();
     eskf_->predict(imu);
+
+    auto state = eskf_->get_state().get_x();
+    imu_states.emplace_back(Sophus::SE3d(state.block<3, 3>(0, 0), state.block<3, 1>(0, 3)));
   }
+  return imu_states;
 }
 
 bool LidarInertialOdometry::update(const sensor_type::Measurement & measurement)
@@ -192,19 +198,33 @@ bool LidarInertialOdometry::update_local_map(
     map_voxel_grid_.setInputCloud(lidar_points.raw_points);
     map_voxel_grid_.filter(*downsampling_submap_cloud);
 
-    submap::Submap submap(pose, lidar_points.raw_points);
+    submap::Submap submap(pose, downsampling_submap_cloud);
     submaps_.emplace_back(submap);
 
-    map_manager_->add_points(submap);
-    local_map_ = map_manager_->get_local_map();
-
-    registration_->setInputTarget(local_map_);
-    is_map_updated = true;
+    // map_manager_->add_points(submap);
+    // local_map_ = map_manager_->get_local_map();
+    // registration_->setInputTarget(local_map_);
+    // is_map_updated = true;
 
     PointType query_point;
     query_point.getVector3fMap() = pose.block<3, 1>(0, 3).cast<float>();
     keyframe_point_->points.emplace_back(query_point);
     kdtree_.setInputCloud(keyframe_point_);
+
+    std::vector<int> indices;
+    std::vector<float> distances;
+
+    if (kdtree_.nearestKSearch(query_point, 5, indices, distances)) {
+      PointCloudPtr new_map(new PointCloud);
+      for (std::size_t idx = 0; idx < indices.size(); idx++) {
+        *new_map += *submaps_[indices[idx]].map_points;
+      }
+      local_map_ = new_map;
+
+      registration_->setInputTarget(new_map);
+
+      is_map_updated = true;
+    }
   }
 
   return is_map_updated;

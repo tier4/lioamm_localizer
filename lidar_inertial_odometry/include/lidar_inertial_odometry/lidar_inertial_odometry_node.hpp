@@ -14,7 +14,6 @@
 
 #ifndef LIDAR_INERTIAL_ODOMETRY__LIDAR_INERTIAL_ODOMETRY_NODE_HPP_
 #define LIDAR_INERTIAL_ODOMETRY__LIDAR_INERTIAL_ODOMETRY_NODE_HPP_
-
 #include "lidar_inertial_odometry/imu_initializer.hpp"
 #include "lidar_inertial_odometry/lidar_inertial_odometry.hpp"
 
@@ -25,7 +24,11 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
+#include <boost/circular_buffer.hpp>
+
 #include <pcl_conversions/pcl_conversions.h>
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
 #include <tf2/convert.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_broadcaster.h>
@@ -78,6 +81,8 @@ private:
 
   std::shared_ptr<std::thread> thread_;
   std::shared_ptr<LidarInertialOdometry> lio_;
+
+  boost::circular_buffer<Sophus::SE3d> pose_buffer_;
 
   std::string base_frame_id_;
   std::string map_frame_id_;
