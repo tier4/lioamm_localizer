@@ -159,6 +159,27 @@ std::tuple<T, T> compute_mean_and_covariance(const D & data, E extractor)
   return std::make_tuple(mean, covariance);
 }
 
+inline std::vector<double> normalize(const std::vector<double> & times)
+{
+  if (times.empty()) return {};
+
+  double min_element = *std::min_element(times.begin(), times.end());
+  double max_element = *std::max_element(times.begin(), times.end());
+
+  if (min_element == max_element) {
+    return std::vector<double>(times.size(), 0.0);
+  }
+
+  std::vector<double> normalized;
+  normalized.reserve(times.size());
+
+  for (double t : times) {
+    normalized.push_back((t - min_element) / (max_element - min_element));
+  }
+
+  return normalized;
+}
+
 }  // namespace lioamm_localizer_utils
 
 #endif

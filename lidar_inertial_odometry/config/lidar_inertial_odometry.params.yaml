@@ -4,8 +4,8 @@
     map_frame_id: map
 
     # Points Pre Processing
-    scan_voxel_size: 0.3
-    map_voxel_size: 0.3
+    scan_voxel_size: 0.25
+    map_voxel_size: 0.25
     crop_min_x: -1.0
     crop_max_x: 1.0
     crop_min_y: -1.0
@@ -23,13 +23,19 @@
     resolution: 1.0
 
     # ESKF
-    acc_noise: 0.05
-    gyro_noise: 0.02
+    acc_noise: 0.1
+    gyro_noise: 0.1
     acc_bias_noise: 1e-5
-    gyro_bias_noise: 1e-5
-    translation_noise: 1e-2
-    rotation_noise: 1e-2
+    gyro_bias_noise: 1e-2
+    translation_noise: 1e-6
+    rotation_noise: 1e-6
     gravity: 9.80665
 
-    translation_threshold: 0.8
+    # Local Map
+    translation_threshold: 1.0
     rotation_threshold: 45.0
+    voxel_map_resolution: 0.25
+    map_removal_distance: 100.0
+
+    # IMU
+    imu_calibration_queue_size: 300
