@@ -44,6 +44,32 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
   map_manager_ =
     std::make_shared<MapManager>(config.voxel_map_resolution, config.map_removal_distance);
 
+  // Optimization
+  gtsam::ISAM2Params smoother_parameters;
+  smoother_parameters.relinearizeThreshold = 0.1;
+  smoother_parameters.relinearizeSkip = 1;
+  // smoother_parameters.cacheLinearizedFactors = true;
+  // smoother_parameters.findUnusedFactorSlots = true;
+  // smoother_parameters.enableDetailedResults = false;
+  smoother_parameters.factorization = gtsam::ISAM2Params::Factorization::QR;
+  optimization_ = std::make_shared<Optimization>(smoother_parameters);
+  optimization_->initialize();
+
+  // IMU Integration
+  gtsam::ISAM2Params imu_integ_parameters;
+  imu_integ_parameters.relinearizeThreshold = 0.1;
+  imu_integ_parameters.relinearizeSkip = 1;
+  ImuIntegration::ImuConfig imu_config;
+  imu_config.accel_noise_sigma = 0.05;  // 3.9939570888238808e-03;
+  imu_config.gyro_noise_sigma = 0.02;   // 1.5636343949698187e-03;
+  imu_config.pose_noise = 1e-2;
+  imu_config.velocity_noise = 1e4;
+  imu_config.bias_noise = 1e-5;
+  imu_config.gravity = -9.80665;
+  imu_config.reset_graph_key = 100;
+  Eigen::VectorXd imu_bias(Eigen::VectorXd::Zero(6));
+  imu_integration_ = std::make_shared<ImuIntegration>(imu_config, imu_bias, imu_integ_parameters);
+
   local_map_.reset(new PointCloud);
   keyframe_point_.reset(new PointCloud);
 }
@@ -93,15 +119,52 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
     Eigen::Matrix4d initial_pose(Eigen::Matrix4d::Identity());
     initial_pose.block<3, 3>(0, 0) = imu_->get_initial_orientation();
 
+    set_timestamp(measurement.lidar_points.stamp, measurement.imu_queue.back().stamp);
+
+    // Kalman Filter
     eskf_->initialize(initial_pose, initial_imu_bias, gravity, measurement.lidar_points.stamp);
     // eskf_->set_Q(imu_->get_acc_cov(), imu_->get_gyro_cov());
 
+    // IMU Integration
+    imu_integration_->initialize(initial_pose, initial_imu_bias);
+
+    // Factor Graph Optimization
+    optimization_->set_initial_value(initial_pose, measurement.lidar_points.stamp);
+
+    // Update Initial Local Map
     update_local_map(initial_pose, measurement.lidar_points);
 
     initialized_ = true;
   }
 }
 
+// IMU Integration
+std::tuple<gtsam::NavState, gtsam::imuBias::ConstantBias> LidarInertialOdometry::predict(
+  std::deque<sensor_type::Imu> imu_queue)
+{
+  Eigen::Vector3d linear_acc = Eigen::Vector3d::Zero();
+  Eigen::Vector3d angular_vel = Eigen::Vector3d::Zero();
+
+  for (auto imu : imu_queue) {
+    const double dt = imu.stamp - last_imu_timestamp_;
+    if (dt <= 0.0) {
+      continue;
+    }
+
+    linear_acc = imu.linear_acceleration;
+    angular_vel = imu.angular_velocity;
+    imu_integration_->get_integrated_measurements().integrateMeasurement(
+      linear_acc, angular_vel, dt);
+
+    last_imu_timestamp_ = imu.stamp;
+  }
+
+  const auto [predict_state, predict_bias] = imu_integration_->predict(transformation_);
+
+  return std::make_tuple(predict_state, predict_bias);
+}
+
+// ESKF
 std::vector<Sophus::SE3d> LidarInertialOdometry::predict(sensor_type::Measurement & measurement)
 {
   std::vector<Sophus::SE3d> imu_states;
@@ -115,6 +178,28 @@ std::vector<Sophus::SE3d> LidarInertialOdometry::predict(sensor_type::Measuremen
   return imu_states;
 }
 
+// Factor Graph
+bool LidarInertialOdometry::update(
+  const sensor_type::Measurement & measurement, const gtsam::NavState & predict_state,
+  const gtsam::imuBias::ConstantBias & predict_bias)
+{
+  auto lidar_points = measurement.lidar_points;
+
+  Eigen::Matrix4d result_pose;
+  if (!scan_matching(
+        lidar_points.preprocessing_points, predict_state.pose().matrix().cast<double>(),
+        result_pose)) {
+    return false;
+  }
+
+  // factor graph optimization relative odometry pose
+  transformation_ = optimization_->update(
+    lidar_points.stamp, result_pose, measurement.map_pose_queue, predict_state, predict_bias);
+
+  return true;
+}
+
+// ESKF
 bool LidarInertialOdometry::update(const sensor_type::Measurement & measurement)
 {
   auto lidar_points = measurement.lidar_points;

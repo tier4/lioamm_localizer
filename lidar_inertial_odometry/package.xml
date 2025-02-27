@@ -26,6 +26,8 @@
   <depend>ndt_omp</depend>
   <depend>lioamm_localizer_common</depend>
   <depend>sophus</depend>
+  <depend>gtsam</depend>
+  <depend>gtsam_unstable</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

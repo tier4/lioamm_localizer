@@ -17,7 +17,9 @@
 
 #include "lidar_inertial_odometry/eskf.hpp"
 #include "lidar_inertial_odometry/imu_initializer.hpp"
+#include "lidar_inertial_odometry/imu_integration.hpp"
 #include "lidar_inertial_odometry/map_mananger.hpp"
+#include "lidar_inertial_odometry/optimization.hpp"
 #include "lidar_inertial_odometry/submap.hpp"
 #include "lioamm_localizer_common/concurrent_queue.hpp"
 #include "lioamm_localizer_common/sensor_type.hpp"
@@ -83,9 +85,20 @@ public:
 
   void initialize(const sensor_type::Measurement & measurement);
 
+  inline void set_timestamp(const double sensor_timestamp, const double imu_timestamp)
+  {
+    last_sensor_timestamp_ = sensor_timestamp;
+    last_imu_timestamp_ = imu_timestamp;
+  }
+
   void predict(sensor_type::Imu imu) { eskf_->predict(imu); }
+  std::tuple<gtsam::NavState, gtsam::imuBias::ConstantBias> predict(
+    std::deque<sensor_type::Imu> imu_queue);
   std::vector<Sophus::SE3d> predict(sensor_type::Measurement & measurement);
   bool update(const sensor_type::Measurement & measurement);
+  bool update(
+    const sensor_type::Measurement & measurement, const gtsam::NavState & predict_state,
+    const gtsam::imuBias::ConstantBias & predict_bias);
 
   bool scan_matching(
     const PointCloudPtr input_cloud_ptr, const Eigen::Matrix4d & initial_guess,
@@ -111,6 +124,8 @@ private:
   std::shared_ptr<ImuInitializer> imu_;
   std::shared_ptr<eskf::ESKF> eskf_;
   std::shared_ptr<MapManager> map_manager_;
+  std::shared_ptr<ImuIntegration> imu_integration_;
+  std::shared_ptr<Optimization> optimization_;
   std::shared_ptr<fast_gicp::FastGICP<PointType, PointType>> registration_;
 
   ConcurrentQueue<sensor_type::Lidar> lidar_buffer_;
@@ -135,6 +150,8 @@ private:
 
   std::shared_ptr<sensor_type::Imu> last_imu_;
   std::shared_ptr<sensor_type::Lidar> last_sensor_points_;
+  double last_sensor_timestamp_;
+  double last_imu_timestamp_;
 };
 
 #endif

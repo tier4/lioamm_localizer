@@ -20,6 +20,16 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
   base_frame_id_ = this->declare_parameter<std::string>("base_frame_id");
   map_frame_id_ = this->declare_parameter<std::string>("map_frame_id");
 
+  // Smoother Type
+  std::string smoother_type = this->declare_parameter<std::string>("smoother_type");
+  if (smoother_type == "Kalman Filter") {
+    smoother_type_ = SmootherType::KALMAN_FILTER;
+  } else if (smoother_type == "Factor Graph") {
+    smoother_type_ = SmootherType::FACTOR_GRAPH;
+  } else {
+    rclcpp::shutdown();
+  }
+
   LidarInertialOdometry::LioConfig config;
   // Registration Config
   config.max_iteration = this->declare_parameter<int>("max_iteration");
@@ -46,6 +56,7 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
   config.gravity = this->declare_parameter<double>("gravity");
   lio_ = std::make_shared<LidarInertialOdometry>(config);
 
+  // Point Cloud Pre-Processing
   const double map_voxel_size = this->declare_parameter<double>("map_voxel_size");
   lio_->set_map_voxel_size(map_voxel_size);
   const double scan_voxel_size = this->declare_parameter<double>("scan_voxel_size");
@@ -87,7 +98,9 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
   deskew_scan_publisher_ =
     this->create_publisher<sensor_msgs::msg::PointCloud2>("deskew_scan", rclcpp::SensorDataQoS());
 
-  thread_ = std::make_shared<std::thread>(&LidarInertialOdometryNode::main_thread, this);
+  // thread_ = std::make_shared<std::thread>(&LidarInertialOdometryNode::main_thread, this);
+  timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(50), std::bind(&LidarInertialOdometryNode::process, this));
 }
 
 LidarInertialOdometryNode::~LidarInertialOdometryNode()
@@ -117,10 +130,7 @@ void LidarInertialOdometryNode::process()
     return;
   }
 
-  // Predict
-  auto predict_states = lio_->predict(measurement);
-
-  // deskew
+  // Scan Correction
   if (2 <= pose_buffer_.size()) {
     std::size_t size = pose_buffer_.size();
     Sophus::SE3d start_pose = pose_buffer_[size - 2];
@@ -143,15 +153,27 @@ void LidarInertialOdometryNode::process()
   measurement.lidar_points.preprocessing_points =
     lio_->preprocessing(measurement.lidar_points.raw_points);
 
-  // Measurement Update
-  if (!lio_->update(measurement)) {
-    RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to update.");
-    return;
+  // Predict & Update
+  if (smoother_type_ == SmootherType::KALMAN_FILTER) {
+    auto predict_states = lio_->predict(measurement);
+
+    if (!lio_->update(measurement)) {
+      RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to update.");
+      return;
+    }
+  } else if (smoother_type_ == SmootherType::FACTOR_GRAPH) {
+    const auto [predict_state, predict_bias] = lio_->predict(measurement.imu_queue);
+
+    if (!lio_->update(measurement, predict_state, predict_bias)) {
+      RCLCPP_ERROR_STREAM(get_logger(), "Measurement Update is Failed.");
+      return;
+    }
   }
 
   Eigen::Matrix4d estimated_pose = lio_->get_result();
-  pose_buffer_.push_back(
-    Sophus::SE3d(estimated_pose.block<3, 3>(0, 0), estimated_pose.block<3, 1>(0, 0)));
+  pose_buffer_.push_back(Sophus::SE3d(
+    Eigen::Quaterniond(estimated_pose.block<3, 3>(0, 0)).normalized().toRotationMatrix(),
+    estimated_pose.block<3, 1>(0, 3)));
 
   // Local map update
   if (lio_->update_local_map(estimated_pose, measurement.lidar_points)) {

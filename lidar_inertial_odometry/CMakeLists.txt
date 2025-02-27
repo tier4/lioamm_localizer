@@ -17,12 +17,13 @@ find_package(TBB REQUIRED)
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
-include_directories(include ${PCL_INCLUDE_DIRS})
+include_directories(include ${PCL_INCLUDE_DIRS} ${GTSAM_INCLUDE_DIR})
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/${PROJECT_NAME}_node.cpp
   src/${PROJECT_NAME}.cpp
   src/eskf.cpp
+  src/optimization.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
@@ -31,7 +32,7 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTOR MultiThreadedExecutor
 )
 
-target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES} ${TBB_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES} ${TBB_LIBRARIES} ${GTSAM_LIBRARY_DIRS} gtsam gtsam_unstable)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
