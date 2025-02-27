@@ -36,6 +36,11 @@
 
 #include <execution>
 
+enum class SmootherType {
+  FACTOR_GRAPH = 0,
+  KALMAN_FILTER = 1,
+};
+
 class LidarInertialOdometryNode : public rclcpp::Node
 {
 public:
@@ -75,6 +80,8 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr local_map_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr deskew_scan_publisher_;
 
+  rclcpp::TimerBase::SharedPtr timer_;
+
   tf2_ros::Buffer tf_buffer_{get_clock()};
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
   std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
@@ -83,6 +90,8 @@ private:
   std::shared_ptr<LidarInertialOdometry> lio_;
 
   boost::circular_buffer<Sophus::SE3d> pose_buffer_;
+
+  SmootherType smoother_type_;
 
   std::string base_frame_id_;
   std::string map_frame_id_;
