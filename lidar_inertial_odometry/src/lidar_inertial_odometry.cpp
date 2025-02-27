@@ -126,10 +126,12 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
     // eskf_->set_Q(imu_->get_acc_cov(), imu_->get_gyro_cov());
 
     // IMU Integration
-    imu_integration_->initialize(initial_pose, initial_imu_bias);
+    imu_integration_->initialize(
+      initial_pose, initial_imu_bias, measurement.imu_queue.back().stamp);
 
     // Factor Graph Optimization
-    optimization_->set_initial_value(initial_pose, measurement.lidar_points.stamp);
+    optimization_->set_initial_value(
+      initial_pose, initial_imu_bias, measurement.lidar_points.stamp);
 
     // Update Initial Local Map
     update_local_map(initial_pose, measurement.lidar_points);
@@ -139,29 +141,29 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
 }
 
 // IMU Integration
-std::tuple<gtsam::NavState, gtsam::imuBias::ConstantBias> LidarInertialOdometry::predict(
-  std::deque<sensor_type::Imu> imu_queue)
+void LidarInertialOdometry::predict(std::deque<sensor_type::Imu> imu_queue)
 {
-  Eigen::Vector3d linear_acc = Eigen::Vector3d::Zero();
-  Eigen::Vector3d angular_vel = Eigen::Vector3d::Zero();
+  // Eigen::Vector3d linear_acc = Eigen::Vector3d::Zero();
+  // Eigen::Vector3d angular_vel = Eigen::Vector3d::Zero();
 
-  for (auto imu : imu_queue) {
-    const double dt = imu.stamp - last_imu_timestamp_;
-    if (dt <= 0.0) {
-      continue;
-    }
+  // for (auto imu : imu_queue) {
+  //   const double dt = imu.stamp - last_imu_timestamp_;
+  //   if (dt <= 0.0) {
+  //     continue;
+  //   }
 
-    linear_acc = imu.linear_acceleration;
-    angular_vel = imu.angular_velocity;
-    imu_integration_->get_integrated_measurements().integrateMeasurement(
-      linear_acc, angular_vel, dt);
+  //   linear_acc = imu.linear_acceleration;
+  //   angular_vel = imu.angular_velocity;
+  //   imu_integration_->get_integrated_measurements().integrateMeasurement(
+  //     linear_acc, angular_vel, dt);
 
-    last_imu_timestamp_ = imu.stamp;
-  }
+  //   last_imu_timestamp_ = imu.stamp;
+  // }
 
-  const auto [predict_state, predict_bias] = imu_integration_->predict(transformation_);
+  // const auto [predict_state, predict_bias] = imu_integration_->predict(transformation_);
 
-  return std::make_tuple(predict_state, predict_bias);
+  // return std::make_tuple(predict_state, predict_bias);
+  imu_integration_->integrate(imu_queue, optimization_->get_bias());
 }
 
 // ESKF
@@ -180,8 +182,7 @@ std::vector<Sophus::SE3d> LidarInertialOdometry::predict(sensor_type::Measuremen
 
 // Factor Graph
 bool LidarInertialOdometry::update(
-  const sensor_type::Measurement & measurement, const gtsam::NavState & predict_state,
-  const gtsam::imuBias::ConstantBias & predict_bias)
+  const sensor_type::Measurement & measurement, const gtsam::NavState & predict_state)
 {
   auto lidar_points = measurement.lidar_points;
 
@@ -193,8 +194,10 @@ bool LidarInertialOdometry::update(
   }
 
   // factor graph optimization relative odometry pose
+  // transformation_ = optimization_->update(lidar_points.stamp, result_pose,
+  // measurement.map_pose_queue, predict_state);
   transformation_ = optimization_->update(
-    lidar_points.stamp, result_pose, measurement.map_pose_queue, predict_state, predict_bias);
+    lidar_points.stamp, result_pose, imu_integration_->get_integrated_measurements());
 
   return true;
 }
@@ -299,7 +302,7 @@ bool LidarInertialOdometry::update_local_map(
     std::vector<int> indices;
     std::vector<float> distances;
 
-    if (kdtree_.nearestKSearch(query_point, 5, indices, distances)) {
+    if (kdtree_.nearestKSearch(query_point, 20, indices, distances)) {
       PointCloudPtr new_map(new PointCloud);
       for (std::size_t idx = 0; idx < indices.size(); idx++) {
         *new_map += *submaps_[indices[idx]].map_points;

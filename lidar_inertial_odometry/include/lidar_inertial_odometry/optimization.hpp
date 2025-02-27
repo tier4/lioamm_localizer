@@ -55,10 +55,18 @@ public:
 
   [[nodiscard]] Eigen::Matrix4d update(
     const double & timestamp, const Eigen::Matrix4d & latest_frame,
-    const std::deque<sensor_type::Pose> & map_pose_queue, const gtsam::NavState state,
-    const gtsam::imuBias::ConstantBias imu_bias);
+    const std::deque<sensor_type::Pose> & map_pose_queue, const gtsam::NavState state);
+  [[nodiscard]] Eigen::Matrix4d update(
+    const double & timestamp, const Eigen::Matrix4d & lidar_pose_matrix,
+    const gtsam::PreintegratedImuMeasurements & imu_integration_ptr);
 
   void set_initial_value(const Eigen::Matrix4d & initial_pose, const double & timestamp);
+  void set_initial_value(
+    const Eigen::Matrix4d & initial_pose, const Eigen::VectorXd & imu_bias,
+    const double & timestamp);
+
+  [[nodiscard]] gtsam::NavState get_state() { return previous_state_; }
+  [[nodiscard]] gtsam::imuBias::ConstantBias get_bias() { return previous_imu_bias_; }
 
 private:
   std::shared_ptr<gtsam::IncrementalFixedLagSmoother> smoother_ptr_;
@@ -66,6 +74,11 @@ private:
 
   gtsam::noiseModel::Diagonal::shared_ptr pose_noise_model_;
   gtsam::noiseModel::Isotropic::shared_ptr velocity_noise_model_;
+  gtsam::noiseModel::Isotropic::shared_ptr bias_noise_model_;
+
+  gtsam::NavState previous_state_;
+  gtsam::imuBias::ConstantBias previous_imu_bias_;
+  gtsam::Pose3 previous_lidar_pose_;
 
   std::size_t key_;
 

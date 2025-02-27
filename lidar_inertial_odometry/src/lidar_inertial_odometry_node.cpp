@@ -162,9 +162,11 @@ void LidarInertialOdometryNode::process()
       return;
     }
   } else if (smoother_type_ == SmootherType::FACTOR_GRAPH) {
-    const auto [predict_state, predict_bias] = lio_->predict(measurement.imu_queue);
+    lio_->predict(measurement.imu_queue);
 
-    if (!lio_->update(measurement, predict_state, predict_bias)) {
+    auto predict_state = lio_->get_state();
+
+    if (!lio_->update(measurement, predict_state)) {
       RCLCPP_ERROR_STREAM(get_logger(), "Measurement Update is Failed.");
       return;
     }

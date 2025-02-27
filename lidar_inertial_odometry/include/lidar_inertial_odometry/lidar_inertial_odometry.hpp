@@ -91,14 +91,13 @@ public:
     last_imu_timestamp_ = imu_timestamp;
   }
 
-  void predict(sensor_type::Imu imu) { eskf_->predict(imu); }
-  std::tuple<gtsam::NavState, gtsam::imuBias::ConstantBias> predict(
-    std::deque<sensor_type::Imu> imu_queue);
+  void predict(std::deque<sensor_type::Imu> imu_queue);
   std::vector<Sophus::SE3d> predict(sensor_type::Measurement & measurement);
+
+  [[nodiscard]] gtsam::NavState get_state() { return optimization_->get_state(); }
+
   bool update(const sensor_type::Measurement & measurement);
-  bool update(
-    const sensor_type::Measurement & measurement, const gtsam::NavState & predict_state,
-    const gtsam::imuBias::ConstantBias & predict_bias);
+  bool update(const sensor_type::Measurement & measurement, const gtsam::NavState & predict_state);
 
   bool scan_matching(
     const PointCloudPtr input_cloud_ptr, const Eigen::Matrix4d & initial_guess,

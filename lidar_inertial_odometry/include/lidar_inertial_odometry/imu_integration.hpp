@@ -15,6 +15,7 @@
 #ifndef LIDAR_INERTIAL_ODOMETRY__IMU_INTEGRATION_HPP_
 #define LIDAR_INERTIAL_ODOMETRY__IMU_INTEGRATION_HPP_
 
+#include "lioamm_localizer_common/concurrent_queue.hpp"
 #include "lioamm_localizer_common/sensor_type.hpp"
 
 #include <Eigen/Core>
@@ -92,38 +93,34 @@ public:
 
   void predict(const std::deque<sensor_type::Imu> & imu_queue) {}
 
-  void integrate(double stamp, double previous_stamp, const gtsam::imuBias::ConstantBias & bias)
+  void integrate(std::deque<sensor_type::Imu> imu_queue, const gtsam::imuBias::ConstantBias & bias)
   {
     imu_integrated_ptr_->resetIntegrationAndSetBias(bias);
 
-    Eigen::Vector3d linear_acc = Eigen::Vector3d::Zero();
-    Eigen::Vector3d angular_vel = Eigen::Vector3d::Zero();
+    Eigen::Vector3d linear_acceleration = Eigen::Vector3d::Zero();
+    Eigen::Vector3d angular_velocity = Eigen::Vector3d::Zero();
 
-    double previous_imu_stamp = previous_stamp;
-    for (auto imu : imu_queue_) {
-      if (stamp < imu.stamp) {
-        break;
-      }
-
-      const double dt = imu.stamp - previous_imu_stamp;
+    for (const auto & imu : imu_queue) {
+      const double dt = imu.stamp - last_imu_time_stamp_;
       if (dt <= 0.0) {
         continue;
       }
-      linear_acc = imu.linear_acceleration;
-      angular_vel = imu.angular_velocity;
-      imu_integrated_ptr_->integrateMeasurement(linear_acc, angular_vel, dt);
+      linear_acceleration = imu.linear_acceleration;
+      angular_velocity = imu.angular_velocity;
+      imu_integrated_ptr_->integrateMeasurement(linear_acceleration, angular_velocity, dt);
 
-      previous_imu_stamp = imu.stamp;
-      imu_queue_.pop_front();
+      last_imu_time_stamp_ = imu.stamp;
     }
 
-    const double dt = stamp - previous_imu_stamp;
-    if (0.0 < dt) {
-      imu_integrated_ptr_->integrateMeasurement(linear_acc, angular_vel, dt);
-    }
+    // const double dt = current_stamp - last_imu_time_stamp_;
+    // if (0.0 < dt) {
+    //   imu_integrated_ptr_->integrateMeasurement(linear_acceleration, angular_velocity, dt);
+    // }
   }
 
-  void initialize(const Eigen::Matrix4d & initial_pose, const Eigen::VectorXd & imu_bias)
+  void initialize(
+    const Eigen::Matrix4d & initial_pose, const Eigen::VectorXd & imu_bias,
+    const double imu_time_stamp)
   {
     key_ = 0;
     gtsam::imuBias::ConstantBias prior_imu_bias(imu_bias.head<3>(), imu_bias.tail<3>());
@@ -142,6 +139,8 @@ public:
       gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(key_), prior_imu_bias, bias_noise_model_));
 
     optimizer_->update(graph, initial_values);
+
+    last_imu_time_stamp_ = imu_time_stamp;
 
     key_++;
   }
@@ -232,7 +231,7 @@ public:
     return imu_integrated_ptr_->predict(state, bias);
   }
 
-  void insert_imu(const sensor_type::Imu & imu) { imu_queue_.emplace_back(imu); }
+  void insert_imu(const sensor_type::Imu & imu) { imu_queue_.push_back(imu); }
 
   gtsam::PreintegratedImuMeasurements & get_integrated_measurements() const
   {
@@ -254,7 +253,8 @@ private:
   gtsam::NavState previous_state_;
   gtsam::imuBias::ConstantBias previous_bias_;
 
-  std::deque<sensor_type::Imu> imu_queue_;
+  ConcurrentQueue<sensor_type::Imu> imu_queue_;
+  double last_imu_time_stamp_;
 
   std::size_t key_;
 };
