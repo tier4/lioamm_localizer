@@ -96,6 +96,27 @@ bool LidarInertialOdometry::sync_measurement(sensor_type::Measurement & measurem
     measurement.imu_queue.push_back(imu);
     imu_buffer_.pop_front();
   }
+
+  if (!map_pose_buffer_.empty()) {
+    std::size_t closest_idx = 0;
+    double min_diff = std::numeric_limits<double>::max();
+
+    for (std::size_t idx = 0; idx < map_pose_buffer_.size(); ++idx) {
+      double diff = std::fabs(map_pose_buffer_[idx].stamp - measurement.lidar_points.stamp);
+      if (diff < min_diff) {
+        min_diff = diff;
+        closest_idx = idx;
+      }
+    }
+
+    measurement.map_pose_queue.push_back(map_pose_buffer_[closest_idx]);
+
+    map_pose_buffer_.clear();
+    // for (std::size_t idx = 0; idx < closest_idx; ++idx) {
+    //   map_pose_buffer_.pop_front();
+    //}
+  }
+
   return true;
 }
 
@@ -111,13 +132,14 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
 
   if (imu_->is_initialized()) {
     Eigen::Vector<double, 6> initial_imu_bias;
+    Eigen::Matrix4d initial_pose(Eigen::Matrix4d::Identity());
     initial_imu_bias.head<3>() = imu_->get_acc_mean();
     initial_imu_bias.tail<3>() = imu_->get_gyro_mean();
 
     Eigen::Vector3d gravity = imu_->get_gravity();
 
-    Eigen::Matrix4d initial_pose(Eigen::Matrix4d::Identity());
-    initial_pose.block<3, 3>(0, 0) = imu_->get_initial_orientation();
+    // initial_pose.block<3, 3>(0, 0) = imu_->get_initial_orientation();
+    initial_pose = measurement.map_pose_queue.back().pose;
 
     set_timestamp(measurement.lidar_points.stamp, measurement.imu_queue.back().stamp);
 

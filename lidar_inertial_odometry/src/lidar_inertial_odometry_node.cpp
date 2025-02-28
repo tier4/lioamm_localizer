@@ -90,6 +90,9 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
   imu_subscriber_ = this->create_subscription<sensor_msgs::msg::Imu>(
     "imu_raw", rclcpp::SensorDataQoS(),
     std::bind(&LidarInertialOdometryNode::callback_imu, this, std::placeholders::_1), imu_sub_opt);
+  map_pose_subscriber_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
+    "map_pose", 5,
+    std::bind(&LidarInertialOdometryNode::map_pose_callback, this, std::placeholders::_1));
 
   pose_stamped_publisher_ =
     this->create_publisher<geometry_msgs::msg::PoseStamped>("pose_stamped", 10);
@@ -97,6 +100,7 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
     "local_map", rclcpp::QoS{1}.transient_local());
   deskew_scan_publisher_ =
     this->create_publisher<sensor_msgs::msg::PointCloud2>("deskew_scan", rclcpp::SensorDataQoS());
+  path_publisher_ = this->create_publisher<nav_msgs::msg::Path>("path", 10);
 
   // thread_ = std::make_shared<std::thread>(&LidarInertialOdometryNode::main_thread, this);
   timer_ = this->create_wall_timer(
@@ -126,6 +130,9 @@ void LidarInertialOdometryNode::process()
   }
 
   if (!lio_->is_initialized()) {
+    if (measurement.map_pose_queue.empty()) {
+      return;
+    }
     lio_->initialize(measurement);
     return;
   }
@@ -203,6 +210,11 @@ void LidarInertialOdometryNode::process()
   estimated_pose_msg.pose =
     lioamm_localizer_utils::convert_matrix_to_pose(estimated_pose.cast<float>());
   pose_stamped_publisher_->publish(estimated_pose_msg);
+
+  estimated_path_.poses.push_back(estimated_pose_msg);
+  estimated_path_.header.frame_id = map_frame_id_;
+  estimated_path_.header.stamp = current_time_stamp;
+  path_publisher_->publish(estimated_path_);
 
   publish_tf(estimated_pose_msg.pose, current_time_stamp, map_frame_id_, base_frame_id_);
 }
@@ -296,6 +308,15 @@ void LidarInertialOdometryNode::callback_imu(const sensor_msgs::msg::Imu::Shared
     Eigen::Vector3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
 
   lio_->insert_imu(imu_data);
+}
+
+void LidarInertialOdometryNode::map_pose_callback(
+  const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+{
+  sensor_type::Pose map_pose;
+  map_pose.stamp = rclcpp::Time(msg->header.stamp).seconds();
+  map_pose.pose = lioamm_localizer_utils::convert_pose_to_matrix(msg->pose).cast<double>();
+  lio_->insert_map_pose(map_pose);
 }
 
 bool LidarInertialOdometryNode::get_transform(

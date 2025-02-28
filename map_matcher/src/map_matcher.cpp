@@ -172,7 +172,7 @@ void MapMatcher::callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr 
         map_matching_fail_ = false;
       }
     }
-    // return;
+    return;
   }
   const auto current_time_stamp = this->now();
   geometry_msgs::msg::PoseStamped estimated_pose_msg;
@@ -181,7 +181,7 @@ void MapMatcher::callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr 
   estimated_pose_msg.pose = lioamm_localizer_utils::convert_matrix_to_pose(transformation_);
   pose_publisher_->publish(estimated_pose_msg);
 
-  publish_tf(estimated_pose_msg.pose, current_time_stamp, map_frame_id_, base_frame_id_);
+  // publish_tf(estimated_pose_msg.pose, current_time_stamp, map_frame_id_, base_frame_id_);
 }
 
 void MapMatcher::callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg)

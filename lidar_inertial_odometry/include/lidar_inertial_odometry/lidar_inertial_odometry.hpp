@@ -109,6 +109,10 @@ public:
 
   inline void insert_points(const sensor_type::Lidar & points) { lidar_buffer_.push_back(points); }
   inline void insert_imu(const sensor_type::Imu & imu) { imu_buffer_.push_back(imu); }
+  inline void insert_map_pose(const sensor_type::Pose & map_pose)
+  {
+    map_pose_buffer_.push_back(map_pose);
+  }
 
   inline bool is_initialized() { return initialized_; }
 
@@ -130,6 +134,7 @@ private:
 
   ConcurrentQueue<sensor_type::Lidar> lidar_buffer_;
   ConcurrentQueue<sensor_type::Imu> imu_buffer_;
+  ConcurrentQueue<sensor_type::Pose> map_pose_buffer_;
 
   pcl::VoxelGrid<PointType> scan_voxel_grid_;
   pcl::VoxelGrid<PointType> map_voxel_grid_;
