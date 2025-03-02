@@ -20,6 +20,7 @@
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <nav_msgs/msg/path.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
@@ -79,6 +80,7 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_stamped_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr local_map_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr deskew_scan_publisher_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr odometry_path_publisher_;
 
   rclcpp::TimerBase::SharedPtr timer_;
 
@@ -90,6 +92,8 @@ private:
   std::shared_ptr<LidarInertialOdometry> lio_;
 
   boost::circular_buffer<Sophus::SE3d> pose_buffer_;
+
+  nav_msgs::msg::Path odometry_path_;
 
   SmootherType smoother_type_;
 

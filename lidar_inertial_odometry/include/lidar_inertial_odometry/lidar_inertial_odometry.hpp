@@ -91,7 +91,7 @@ public:
     last_imu_timestamp_ = imu_timestamp;
   }
 
-  void predict(std::deque<sensor_type::Imu> imu_queue);
+  gtsam::NavState predict(const double stamp, std::deque<sensor_type::Imu> imu_queue);
   std::vector<Sophus::SE3d> predict(sensor_type::Measurement & measurement);
 
   [[nodiscard]] gtsam::NavState get_state() { return optimization_->get_state(); }
@@ -125,7 +125,7 @@ private:
   std::shared_ptr<MapManager> map_manager_;
   std::shared_ptr<ImuIntegration> imu_integration_;
   std::shared_ptr<Optimization> optimization_;
-  std::shared_ptr<fast_gicp::FastGICP<PointType, PointType>> registration_;
+  std::shared_ptr<fast_gicp::FastVGICP<PointType, PointType>> registration_;
 
   ConcurrentQueue<sensor_type::Lidar> lidar_buffer_;
   ConcurrentQueue<sensor_type::Imu> imu_buffer_;

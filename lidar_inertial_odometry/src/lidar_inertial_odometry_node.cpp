@@ -93,10 +93,11 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
 
   pose_stamped_publisher_ =
     this->create_publisher<geometry_msgs::msg::PoseStamped>("pose_stamped", 10);
-  local_map_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-    "local_map", rclcpp::QoS{1}.transient_local());
+  local_map_publisher_ =
+    this->create_publisher<sensor_msgs::msg::PointCloud2>("local_map", rclcpp::SensorDataQoS());
   deskew_scan_publisher_ =
     this->create_publisher<sensor_msgs::msg::PointCloud2>("deskew_scan", rclcpp::SensorDataQoS());
+  odometry_path_publisher_ = this->create_publisher<nav_msgs::msg::Path>("odometry_path", 10);
 
   // thread_ = std::make_shared<std::thread>(&LidarInertialOdometryNode::main_thread, this);
   timer_ = this->create_wall_timer(
@@ -159,16 +160,14 @@ void LidarInertialOdometryNode::process()
 
     if (!lio_->update(measurement)) {
       RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to update.");
-      return;
+      // return;
     }
   } else if (smoother_type_ == SmootherType::FACTOR_GRAPH) {
-    lio_->predict(measurement.imu_queue);
-
-    auto predict_state = lio_->get_state();
+    auto predict_state = lio_->predict(measurement.lidar_points.stamp, measurement.imu_queue);
 
     if (!lio_->update(measurement, predict_state)) {
       RCLCPP_ERROR_STREAM(get_logger(), "Measurement Update is Failed.");
-      return;
+      // return;
     }
   }
 
@@ -206,6 +205,11 @@ void LidarInertialOdometryNode::process()
     lioamm_localizer_utils::convert_matrix_to_pose(estimated_pose.cast<float>());
   pose_stamped_publisher_->publish(estimated_pose_msg);
 
+  odometry_path_.poses.emplace_back(estimated_pose_msg);
+  odometry_path_.header.frame_id = map_frame_id_;
+  odometry_path_.header.stamp = current_time_stamp;
+  odometry_path_publisher_->publish(odometry_path_);
+
   publish_tf(estimated_pose_msg.pose, current_time_stamp, map_frame_id_, base_frame_id_);
 }
 
@@ -213,6 +217,8 @@ void LidarInertialOdometryNode::callback_points(const sensor_msgs::msg::PointClo
 {
   PointCloudPtr cloud(new PointCloud);
   pcl::fromROSMsg(*msg, *cloud);
+
+  double scan_duration = 0.0;
 
   auto find_timestamp_field = [&msg]() -> std::string_view {
     constexpr std::array<std::string_view, 4> candidate_fields = {
@@ -224,7 +230,6 @@ void LidarInertialOdometryNode::callback_points(const sensor_msgs::msg::PointClo
     return (it != msg->fields.end()) ? it->name : std::string_view{};
   };
 
-  double scan_duration = 0.0;
   std::string_view timestamp_field = find_timestamp_field();
   std::vector<double> timestamps;
   if (!timestamp_field.empty()) {

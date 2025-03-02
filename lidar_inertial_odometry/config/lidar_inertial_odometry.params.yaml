@@ -1,12 +1,13 @@
 /**:
   ros__parameters:
-    base_frame_id: os1_sensor
+    base_frame_id: base_link
     map_frame_id: map
 
+    # smoother_type: Kalman Filter
     smoother_type: Factor Graph
 
     # Points Pre Processing
-    scan_voxel_size: 0.25
+    scan_voxel_size: 1.0
     map_voxel_size: 0.25
     crop_min_x: -1.0
     crop_max_x: 1.0
