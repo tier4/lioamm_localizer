@@ -171,7 +171,6 @@ bool LidarInertialOdometry::update(
   if (!scan_matching(
         lidar_points.preprocessing_points, predict_state.pose().matrix().cast<double>(),
         result_pose)) {
-    transformation_ = predict_state.pose().matrix().cast<double>();
     return false;
   }
 
@@ -189,7 +188,6 @@ bool LidarInertialOdometry::update(const sensor_type::Measurement & measurement)
   Eigen::Matrix4d initial_guess = eskf_->get_state().get_x();
   Eigen::Matrix4d result_pose;
   if (!scan_matching(lidar_points.preprocessing_points, initial_guess, result_pose)) {
-    transformation_ = initial_guess;
     return false;
   }
 
@@ -262,14 +260,15 @@ bool LidarInertialOdometry::update_local_map(
   bool is_map_updated = false;
 
   if (is_map_update_required(pose)) {
-    PointCloudPtr filtered_cloud(new PointCloud);
+    PointCloudPtr crop_cloud(new PointCloud);
     PointCloudPtr downsampling_submap_cloud(new PointCloud);
 
-    filtered_cloud = preprocessing(lidar_points.raw_points);
-    map_voxel_grid_.setInputCloud(filtered_cloud);
+    crop_.setInputCloud(lidar_points.raw_points);
+    crop_.filter(*crop_cloud);
+    map_voxel_grid_.setInputCloud(crop_cloud);
     map_voxel_grid_.filter(*downsampling_submap_cloud);
 
-    submap::Submap submap(pose, filtered_cloud);
+    submap::Submap submap(pose, downsampling_submap_cloud);
     submaps_.emplace_back(submap);
 
     // map_manager_->add_points(submap);

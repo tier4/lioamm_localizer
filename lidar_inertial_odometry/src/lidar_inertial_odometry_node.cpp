@@ -160,14 +160,14 @@ void LidarInertialOdometryNode::process()
 
     if (!lio_->update(measurement)) {
       RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to update.");
-      // return;
+      return;
     }
   } else if (smoother_type_ == SmootherType::FACTOR_GRAPH) {
     auto predict_state = lio_->predict(measurement.lidar_points.stamp, measurement.imu_queue);
 
     if (!lio_->update(measurement, predict_state)) {
       RCLCPP_ERROR_STREAM(get_logger(), "Measurement Update is Failed.");
-      // return;
+      return;
     }
   }
 

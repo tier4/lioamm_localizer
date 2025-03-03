@@ -16,7 +16,7 @@
 
 #include <cmath>
 
-Optimization::Optimization(const gtsam::ISAM2Params parameter) : key_(0), lidar_odom_buffer_(3)
+Optimization::Optimization(const gtsam::ISAM2Params parameter) : key_(0)
 {
   smoother_ptr_ = std::make_shared<gtsam::IncrementalFixedLagSmoother>(5.0, parameter);
   optimizer_ = std::make_shared<gtsam::ISAM2>(parameter);
@@ -36,7 +36,7 @@ void Optimization::set_initial_value(
   gtsam::Pose3 prior_pose(initial_pose);
   gtsam::Vector3 prior_velocity = gtsam::Vector3::Zero();
 
-  const auto pose_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-2);
+  const auto pose_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-6);
   const auto velocity_noise_model = gtsam::noiseModel::Isotropic::Sigma(3, 1e-6);
   const auto bias_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-5);
 
@@ -57,7 +57,6 @@ void Optimization::set_initial_value(
   new_timestamp[B(key_)] = timestamp;
 
   smoother_ptr_->update(graph, initial_values, new_timestamp);
-  smoother_ptr_->update();
 
   latest_state_ = gtsam::NavState(prior_pose, prior_velocity);
   latest_imu_bias_ = prior_imu_bias;
@@ -80,20 +79,16 @@ Eigen::Matrix4d Optimization::update(
   gtsam::BetweenFactor<gtsam::imuBias::ConstantBias> imu_bias_factor(
     B(key_ - 1), B(key_), gtsam::imuBias::ConstantBias(),
     gtsam::noiseModel::Diagonal::Sigmas(
-      std::sqrt(imu_integration_ptr.deltaTij()) * imu_bias_noise_between_));
+      sqrt(imu_integration_ptr.deltaTij()) * imu_bias_noise_between_));
 
   // add IMU factor
   graph.add(imu_factor);
   graph.add(imu_bias_factor);
 
-  // LiDAR Pose Prior factor
   gtsam::Pose3 lidar_pose(lidar_pose_matrix);
-  gtsam::PriorFactor<gtsam::Pose3> lidar_prior_factor(
-    X(key_), lidar_pose,
-    gtsam::noiseModel::Diagonal::Sigmas(
-      (gtsam::Vector(6) << 1e-6, 1e-6, 1e-6, 1e-4, 1e-4, 1e-4).finished()));
 
-  // add LiDAR Prior factor
+  gtsam::PriorFactor<gtsam::Pose3> lidar_prior_factor(
+    X(key_), lidar_pose, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
   graph.add(lidar_prior_factor);
 
   auto predict_state = imu_integration_ptr.predict(latest_state_, latest_imu_bias_);

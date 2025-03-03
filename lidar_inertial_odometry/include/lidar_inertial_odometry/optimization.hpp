@@ -76,8 +76,6 @@ private:
   gtsam::imuBias::ConstantBias latest_imu_bias_;
 
   std::size_t key_;
-
-  boost::circular_buffer<gtsam::Pose3> lidar_odom_buffer_;
 };
 
 #endif
