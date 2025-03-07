@@ -83,7 +83,7 @@ public:
     crop_.setMax(max);
   }
 
-  void initialize(const sensor_type::Measurement & measurement);
+  void initialize(sensor_type::Measurement & measurement);
 
   inline void set_timestamp(const double sensor_timestamp, const double imu_timestamp)
   {
