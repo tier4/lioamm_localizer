@@ -3,7 +3,7 @@
     base_frame_id: base_link
     map_frame_id: map
 
-    publish_frequency: 10.0
+    publish_frequency: 10.0 # hz
 
     # smoother_type: Kalman Filter
     smoother_type: Factor Graph
@@ -43,4 +43,4 @@
     max_submap_size: 20
 
     # IMU
-    imu_calibration_queue_size: 300
+    imu_calibration_time: 1.0

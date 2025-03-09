@@ -46,7 +46,7 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
   config.voxel_map_resolution = this->declare_parameter<double>("voxel_map_resolution");
   config.max_submap_size = this->declare_parameter<int>("max_submap_size");
   // IMU
-  config.imu_calibration_queue_size = this->declare_parameter<int>("imu_calibration_queue_size");
+  config.imu_calibration_time = this->declare_parameter<double>("imu_calibration_time");
   // ESKF Config
   config.acc_noise = this->declare_parameter<double>("acc_noise");
   config.gyro_noise = this->declare_parameter<double>("gyro_noise");
