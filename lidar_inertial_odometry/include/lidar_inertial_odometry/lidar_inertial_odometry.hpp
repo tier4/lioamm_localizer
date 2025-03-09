@@ -50,6 +50,7 @@ public:
     double rotation_threshold;
     double voxel_map_resolution;
     double map_removal_distance;
+    int max_submap_size;
 
     // ESKF
     double acc_noise;
@@ -72,10 +73,6 @@ public:
   {
     scan_voxel_grid_.setLeafSize(voxel_size, voxel_size, voxel_size);
   }
-  inline void set_map_voxel_size(const double voxel_size)
-  {
-    map_voxel_grid_.setLeafSize(voxel_size, voxel_size, voxel_size);
-  }
   inline void set_crop_area(const Eigen::Vector4f min, const Eigen::Vector4f max)
   {
     crop_.setNegative(true);
@@ -84,12 +81,6 @@ public:
   }
 
   void initialize(sensor_type::Measurement & measurement);
-
-  inline void set_timestamp(const double sensor_timestamp, const double imu_timestamp)
-  {
-    last_sensor_timestamp_ = sensor_timestamp;
-    last_imu_timestamp_ = imu_timestamp;
-  }
 
   gtsam::NavState predict(const double stamp, std::deque<sensor_type::Imu> imu_queue);
   std::vector<Sophus::SE3d> predict(sensor_type::Measurement & measurement);
@@ -104,7 +95,9 @@ public:
     Eigen::Matrix4d & result_pose);
 
   bool is_map_update_required(const Eigen::Matrix4d & pose);
-  bool update_local_map(const Eigen::Matrix4d & pose, const sensor_type::Lidar & lidar_points);
+  bool update_local_map(
+    const Eigen::Matrix4d & pose, const sensor_type::Lidar & lidar_points,
+    const bool first = false);
 
   inline void insert_points(const sensor_type::Lidar & points) { lidar_buffer_.push_back(points); }
   inline void insert_imu(const sensor_type::Imu & imu) { imu_buffer_.push_back(imu); }
@@ -125,32 +118,24 @@ private:
   std::shared_ptr<MapManager> map_manager_;
   std::shared_ptr<ImuIntegration> imu_integration_;
   std::shared_ptr<Optimization> optimization_;
-  std::shared_ptr<fast_gicp::FastVGICP<PointType, PointType>> registration_;
+  std::shared_ptr<fast_gicp::FastGICP<PointType, PointType>> registration_;
+
+  LioConfig config_;
 
   ConcurrentQueue<sensor_type::Lidar> lidar_buffer_;
   ConcurrentQueue<sensor_type::Imu> imu_buffer_;
 
   pcl::VoxelGrid<PointType> scan_voxel_grid_;
-  pcl::VoxelGrid<PointType> map_voxel_grid_;
   pcl::CropBox<PointType> crop_;
-
-  PointCloudPtr local_map_;
 
   pcl::KdTreeFLANN<PointType> kdtree_;
   PointCloudPtr keyframe_point_;
 
-  LioConfig config_;
-
-  bool initialized_{false};
-
+  PointCloudPtr local_map_;
   Eigen::Matrix4d transformation_;
 
-  std::vector<submap::Submap> submaps_;
-
-  std::shared_ptr<sensor_type::Imu> last_imu_;
-  std::shared_ptr<sensor_type::Lidar> last_sensor_points_;
-  double last_sensor_timestamp_;
-  double last_imu_timestamp_;
+  bool initialized_{false};
+  std::future<PointCloudPtr> mapping_future_;
 };
 
 #endif

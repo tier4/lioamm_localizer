@@ -44,6 +44,7 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
   config.rotation_threshold = this->declare_parameter<double>("rotation_threshold") * M_PI / 180.0;
   config.map_removal_distance = this->declare_parameter<double>("map_removal_distance");
   config.voxel_map_resolution = this->declare_parameter<double>("voxel_map_resolution");
+  config.max_submap_size = this->declare_parameter<int>("max_submap_size");
   // IMU
   config.imu_calibration_queue_size = this->declare_parameter<int>("imu_calibration_queue_size");
   // ESKF Config
@@ -57,8 +58,6 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
   lio_ = std::make_shared<LidarInertialOdometry>(config);
 
   // Point Cloud Pre-Processing
-  const double map_voxel_size = this->declare_parameter<double>("map_voxel_size");
-  lio_->set_map_voxel_size(map_voxel_size);
   const double scan_voxel_size = this->declare_parameter<double>("scan_voxel_size");
   lio_->set_scan_voxel_size(scan_voxel_size);
   const double crop_min_x = this->declare_parameter<double>("crop_min_x");
@@ -99,24 +98,15 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
     this->create_publisher<sensor_msgs::msg::PointCloud2>("deskew_scan", rclcpp::SensorDataQoS());
   odometry_path_publisher_ = this->create_publisher<nav_msgs::msg::Path>("odometry_path", 10);
 
-  // thread_ = std::make_shared<std::thread>(&LidarInertialOdometryNode::main_thread, this);
-  timer_ = this->create_wall_timer(
-    std::chrono::milliseconds(50), std::bind(&LidarInertialOdometryNode::process, this));
+  const double publish_frequency = this->declare_parameter<double>("publish_frequency");
+  const double dt = 1.0 / std::max(publish_frequency, 0.1);
+  timer_ = rclcpp::create_timer(
+    this, this->get_clock(), rclcpp::Duration::from_seconds(dt),
+    std::bind(&LidarInertialOdometryNode::process, this));
 }
 
 LidarInertialOdometryNode::~LidarInertialOdometryNode()
 {
-  if (thread_->joinable()) {
-    thread_->join();
-  }
-}
-
-void LidarInertialOdometryNode::main_thread()
-{
-  while (rclcpp::ok()) {
-    process();
-  }
-  rclcpp::shutdown();
 }
 
 void LidarInertialOdometryNode::process()
@@ -178,21 +168,26 @@ void LidarInertialOdometryNode::process()
 
   // Local map update
   if (lio_->update_local_map(estimated_pose, measurement.lidar_points)) {
-    PointCloudPtr transform_cloud(new PointCloud);
-    // pcl::transformPointCloud(
-    //   *measurement.lidar_points.raw_points, *transform_cloud, estimated_pose);
-    transform_cloud = lio_->get_local_map();
-    sensor_msgs::msg::PointCloud2 local_map_msg;
-    pcl::toROSMsg(*transform_cloud, local_map_msg);
-    local_map_msg.header.frame_id = map_frame_id_;
-    local_map_msg.header.stamp = now();
-    local_map_publisher_->publish(local_map_msg);
+    local_map_publisher_thread_ = std::thread(
+      &LidarInertialOdometryNode::publish_local_map, this, measurement.lidar_points.stamp);
+    local_map_publisher_thread_.detach();
   }
 
   // Publish ROS Message
-  auto publisher_thread =
+  publisher_thread_ =
     std::thread(&LidarInertialOdometryNode::publish_message, this, measurement, estimated_pose);
-  publisher_thread.detach();
+  publisher_thread_.detach();
+}
+
+void LidarInertialOdometryNode::publish_local_map(const double stamp)
+{
+  PointCloudPtr transform_cloud(new PointCloud);
+  transform_cloud = lio_->get_local_map();
+  sensor_msgs::msg::PointCloud2 local_map_msg;
+  pcl::toROSMsg(*transform_cloud, local_map_msg);
+  local_map_msg.header.frame_id = map_frame_id_;
+  local_map_msg.header.stamp = from_sec(stamp);
+  local_map_publisher_->publish(local_map_msg);
 }
 
 void LidarInertialOdometryNode::publish_message(

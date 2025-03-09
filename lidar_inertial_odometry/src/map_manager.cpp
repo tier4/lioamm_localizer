@@ -15,8 +15,10 @@
 #include "lidar_inertial_odometry/map_mananger.hpp"
 
 MapManager::MapManager(
-  const double resolution, const double translation_threshold, const double rotation_threshold)
+  const double resolution, const int max_submap_size, const double translation_threshold,
+  const double rotation_threshold)
 : resolution_(resolution),
+  max_submap_size_(max_submap_size),
   translation_threshold_(translation_threshold),
   rotation_threshold_(rotation_threshold)
 {
@@ -25,7 +27,8 @@ MapManager::MapManager(
 
   voxel_grid_.setLeafSize(resolution, resolution, resolution);
 
-  map_thread_ = std::thread(&MapManager::process_queue, this);
+  // TODO: multi thread
+  thread_ = std::thread(&MapManager::task_runner, this);
 }
 
 MapManager::~MapManager()
@@ -36,12 +39,12 @@ MapManager::~MapManager()
   }
 
   task_queue_condition_.notify_all();
-  if (map_thread_.joinable()) {
-    map_thread_.join();
+  if (thread_.joinable()) {
+    thread_.join();
   }
 }
 
-void MapManager::process_queue()
+void MapManager::task_runner()
 {
   while (!stop_) {
     std::function<void()> task;
@@ -49,28 +52,42 @@ void MapManager::process_queue()
       std::unique_lock<std::mutex> lock(task_queue_mutex_);
       task_queue_condition_.wait(lock, [this] { return !task_queue_.empty() || stop_; });
 
-      task = task_queue_.front();
+      task = std::move(task_queue_.front());
       task_queue_.pop_front();
     }
     task();
   }
 }
 
-void MapManager::add_map_points(
+std::future<PointCloudPtr> MapManager::add_map_points(
   const sensor_type::Lidar & sensor_measurement, const Eigen::Matrix4d & keyframe_pose)
 {
   submap::Submap submap(keyframe_pose, sensor_measurement.raw_points);
-  auto task = std::bind(&MapManager::build_map_task, this, submap);
+  auto function = std::bind(&MapManager::build_map_task, this, submap);
+
+  auto task =
+    std::make_shared<std::packaged_task<PointCloudPtr()>>([function]() { return function(); });
+
+  auto future = task->get_future();
+
+  add_task_queue([task]() { (*task)(); });
+
+  return future;
+}
+
+template <typename F>
+void MapManager::add_task_queue(F && task)
+{
   {
     std::lock_guard<std::mutex> lock(task_queue_mutex_);
-    task_queue_.emplace_back(task);
+    task_queue_.push_back(std::forward<F>(task));
   }
   task_queue_condition_.notify_one();
 }
 
-void MapManager::build_map_task(const submap::Submap & submap)
+PointCloudPtr MapManager::build_map_task(const submap::Submap & submap)
 {
-  submaps_.emplace_back(submap);
+  submaps_.push_back(submap);
 
   PointType query_point;
   query_point.getVector3fMap() = submap.keyframe_pose.block<3, 1>(0, 3).cast<float>();
@@ -86,32 +103,30 @@ void MapManager::build_map_task(const submap::Submap & submap)
     }
   }
 
-  if (20 < submaps_.size()) {
-    auto map_points = submaps_.front();
-    for (const auto & point : map_points.map_points->points) {
+  int local_submap_size = (int)submaps_.size() - max_submap_size_;
+  if (0 <= local_submap_size) {
+    for (const auto & point : submaps_[local_submap_size].map_points->points) {
       auto key = get_voxel_index(point.getVector3fMap());
       if (voxel_map_.count(key)) {
         voxel_map_.erase(key);
       }
     }
-    submaps_.pop_front();
   }
 
   PointCloudPtr updated_cloud(new PointCloud);
   for (const auto & [key, points] : voxel_map_) {
     auto mean = points.mean;
     PointType p;
-    p.x = mean.x();
-    p.y = mean.y();
-    p.z = mean.z();
+    p.getVector3fMap() = mean;
     updated_cloud->points.emplace_back(p);
   }
 
-  {
-    std::unique_lock<std::shared_mutex> lock(map_mutex_);
-    local_map_ = updated_cloud;
-    new_map_is_ready_ = true;
-  }
+  std::unique_lock<std::shared_mutex> lock(map_mutex_);
+  local_map_.reset(new PointCloud);
+  local_map_ = updated_cloud;
+  new_map_is_ready_ = true;
+
+  return local_map_;
 }
 
 bool MapManager::is_map_update(const Eigen::Matrix4d & pose)

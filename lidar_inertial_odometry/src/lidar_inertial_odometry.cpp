@@ -18,8 +18,8 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
 : config_(config), transformation_(Eigen::Matrix4d::Identity())
 {
   // Registration
-  registration_ = std::make_shared<fast_gicp::FastVGICP<PointType, PointType>>();
-  registration_->setResolution(config.resolution);
+  registration_ = std::make_shared<fast_gicp::FastGICP<PointType, PointType>>();
+  // registration_->setResolution(config.resolution);
   registration_->setMaxCorrespondenceDistance(config.max_correspondence_distance);
   registration_->setCorrespondenceRandomness(config.correspondence_randomness);
   registration_->setTransformationEpsilon(config.transformation_epsilon);
@@ -42,7 +42,8 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
 
   // Map Manager
   map_manager_ = std::make_shared<MapManager>(
-    config.voxel_map_resolution, config.translation_threshold, config.rotation_threshold);
+    config.voxel_map_resolution, config.max_submap_size, config.translation_threshold,
+    config.rotation_threshold);
 
   // Optimization
   gtsam::ISAM2Params smoother_parameters;
@@ -107,7 +108,7 @@ void LidarInertialOdometry::initialize(sensor_type::Measurement & measurement)
   }
 
   if (imu_->is_initialized()) {
-    Eigen::Vector<double, 6> initial_imu_bias;
+    Eigen::Vector<double, 6> initial_imu_bias = Eigen::Vector<double, 6>::Zero();
     initial_imu_bias.head<3>() = imu_->get_acc_mean();
     initial_imu_bias.tail<3>() = imu_->get_gyro_mean();
 
@@ -116,11 +117,8 @@ void LidarInertialOdometry::initialize(sensor_type::Measurement & measurement)
     Eigen::Matrix4d initial_pose(Eigen::Matrix4d::Identity());
     initial_pose.block<3, 3>(0, 0) = imu_->get_initial_orientation();
 
-    set_timestamp(measurement.lidar_points.stamp, measurement.imu_queue.back().stamp);
-
     // Kalman Filter
     eskf_->initialize(initial_pose, initial_imu_bias, gravity, measurement.lidar_points.stamp);
-    // eskf_->set_Q(imu_->get_acc_cov(), imu_->get_gyro_cov());
 
     // IMU Integration
     imu_integration_->initialize(measurement.imu_queue.back().stamp);
@@ -130,9 +128,7 @@ void LidarInertialOdometry::initialize(sensor_type::Measurement & measurement)
       initial_pose, initial_imu_bias, measurement.lidar_points.stamp);
 
     // Update Initial Local Map
-    measurement.lidar_points.preprocessing_points =
-      preprocessing(measurement.lidar_points.raw_points);
-    update_local_map(initial_pose, measurement.lidar_points);
+    update_local_map(initial_pose, measurement.lidar_points, true);
 
     initialized_ = true;
   }
@@ -205,8 +201,10 @@ bool LidarInertialOdometry::scan_matching(
   const PointCloudPtr input_cloud_ptr, const Eigen::Matrix4d & initial_guess,
   Eigen::Matrix4d & result_pose)
 {
-  if (map_manager_->submap_is_ready()) {
-    local_map_ = map_manager_->get_local_map();
+  if (
+    map_manager_->submap_is_ready() &&
+    mapping_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+    local_map_ = mapping_future_.get();
     registration_->setInputTarget(local_map_);
     map_manager_->reset_flag();
   }
@@ -232,13 +230,16 @@ bool LidarInertialOdometry::scan_matching(
 }
 
 bool LidarInertialOdometry::update_local_map(
-  const Eigen::Matrix4d & pose, const sensor_type::Lidar & lidar_points)
+  const Eigen::Matrix4d & pose, const sensor_type::Lidar & lidar_points, const bool first)
 {
-  bool is_map_updated = false;
-  if (map_manager_->is_map_update(pose)) {
-    map_manager_->add_map_points(lidar_points, pose);
-    is_map_updated = true;
+  bool is_map_updated = map_manager_->is_map_update(pose);
+  if (is_map_updated) {
+    mapping_future_ = map_manager_->add_map_points(lidar_points, pose);
+    if (first) {
+      mapping_future_.wait();
+    }
   }
+
   return is_map_updated;
 }
 

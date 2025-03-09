@@ -3,12 +3,13 @@
     base_frame_id: base_link
     map_frame_id: map
 
+    publish_frequency: 10.0
+
     # smoother_type: Kalman Filter
     smoother_type: Factor Graph
 
     # Points Pre Processing
-    scan_voxel_size: 1.0
-    map_voxel_size: 1.0
+    scan_voxel_size: 0.5
     crop_min_x: -1.0
     crop_max_x: 1.0
     crop_min_y: -1.0
@@ -20,7 +21,7 @@
     # Scan Registration
     max_correspondence_distance: 2.0
     correspondence_randomness: 20
-    max_iteration: 100
+    max_iteration: 64
     omp_num_thread: 4
     transformation_epsilon: 0.01
     resolution: 1.0
@@ -35,10 +36,11 @@
     gravity: 9.80665
 
     # Local Map
-    translation_threshold: 1.0
+    translation_threshold: 5.0
     rotation_threshold: 45.0
-    voxel_map_resolution: 0.25
+    voxel_map_resolution: 0.5
     map_removal_distance: 100.0
+    max_submap_size: 20
 
     # IMU
     imu_calibration_queue_size: 300
