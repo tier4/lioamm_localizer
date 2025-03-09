@@ -38,7 +38,7 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
   eskf_ = std::make_shared<eskf::ESKF>(eskf_config);
 
   // IMU Initializer
-  imu_ = std::make_shared<ImuInitializer>(config.imu_calibration_queue_size, config.gravity);
+  imu_ = std::make_shared<ImuInitializer>(config.imu_calibration_time, config.gravity);
 
   // Map Manager
   map_manager_ = std::make_shared<MapManager>(

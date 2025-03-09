@@ -21,8 +21,8 @@
 class ImuInitializer
 {
 public:
-  ImuInitializer(std::size_t max_queue_size, const double gravity)
-  : max_queue_size_(max_queue_size),
+  ImuInitializer(const double imu_calibration_time, const double gravity)
+  : imu_calibration_time_(imu_calibration_time),
     gravity_(gravity),
     initial_orientation_(Eigen::Matrix3d::Identity())
   {
@@ -37,7 +37,8 @@ public:
     imu_buffer_.push_back(imu_data);
 
     // calculate mean, covariance and gravity orientation
-    if (max_queue_size_ < imu_buffer_.size()) {
+    const double dt = imu_buffer_.back().stamp - imu_buffer_.front().stamp;
+    if (imu_calibration_time_ < dt) {
       // calculate mean of acc and gyro
       auto [acc_mean, acc_cov] =
         lioamm_localizer_utils::compute_mean_and_covariance<Eigen::Vector3d>(
@@ -106,7 +107,7 @@ public:
 private:
   std::deque<sensor_type::Imu> imu_buffer_;
   bool initialized_{false};
-  std::size_t max_queue_size_;
+  double imu_calibration_time_;
   double gravity_;
 
   Eigen::Vector3d acc_mean_;

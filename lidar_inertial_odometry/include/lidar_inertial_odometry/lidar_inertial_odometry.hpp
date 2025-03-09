@@ -62,7 +62,7 @@ public:
     double gravity;
 
     // IMU
-    std::size_t imu_calibration_queue_size;
+    double imu_calibration_time;
   };
 
   LidarInertialOdometry(LioConfig config = LioConfig());
