@@ -18,8 +18,8 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
 : config_(config), transformation_(Eigen::Matrix4d::Identity())
 {
   // Registration
-  registration_ = std::make_shared<fast_gicp::FastVGICP<PointType, PointType>>();
-  registration_->setResolution(config.resolution);
+  registration_ = std::make_shared<fast_gicp::FastGICP<PointType, PointType>>();
+  // registration_->setResolution(config.resolution);
   registration_->setMaxCorrespondenceDistance(config.max_correspondence_distance);
   registration_->setCorrespondenceRandomness(config.correspondence_randomness);
   registration_->setTransformationEpsilon(config.transformation_epsilon);
@@ -41,8 +41,9 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
   imu_ = std::make_shared<ImuInitializer>(config.imu_calibration_queue_size, config.gravity);
 
   // Map Manager
-  map_manager_ =
-    std::make_shared<MapManager>(config.voxel_map_resolution, config.map_removal_distance);
+  map_manager_ = std::make_shared<MapManager>(
+    config.voxel_map_resolution, config.max_submap_size, config.translation_threshold,
+    config.rotation_threshold);
 
   // Optimization
   gtsam::ISAM2Params smoother_parameters;
@@ -96,7 +97,7 @@ bool LidarInertialOdometry::sync_measurement(sensor_type::Measurement & measurem
   return true;
 }
 
-void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurement)
+void LidarInertialOdometry::initialize(sensor_type::Measurement & measurement)
 {
   if (initialized_) {
     return;
@@ -107,7 +108,7 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
   }
 
   if (imu_->is_initialized()) {
-    Eigen::Vector<double, 6> initial_imu_bias;
+    Eigen::Vector<double, 6> initial_imu_bias = Eigen::Vector<double, 6>::Zero();
     initial_imu_bias.head<3>() = imu_->get_acc_mean();
     initial_imu_bias.tail<3>() = imu_->get_gyro_mean();
 
@@ -116,11 +117,8 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
     Eigen::Matrix4d initial_pose(Eigen::Matrix4d::Identity());
     initial_pose.block<3, 3>(0, 0) = imu_->get_initial_orientation();
 
-    set_timestamp(measurement.lidar_points.stamp, measurement.imu_queue.back().stamp);
-
     // Kalman Filter
     eskf_->initialize(initial_pose, initial_imu_bias, gravity, measurement.lidar_points.stamp);
-    // eskf_->set_Q(imu_->get_acc_cov(), imu_->get_gyro_cov());
 
     // IMU Integration
     imu_integration_->initialize(measurement.imu_queue.back().stamp);
@@ -130,7 +128,7 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
       initial_pose, initial_imu_bias, measurement.lidar_points.stamp);
 
     // Update Initial Local Map
-    update_local_map(initial_pose, measurement.lidar_points);
+    update_local_map(initial_pose, measurement.lidar_points, true);
 
     initialized_ = true;
   }
@@ -203,6 +201,14 @@ bool LidarInertialOdometry::scan_matching(
   const PointCloudPtr input_cloud_ptr, const Eigen::Matrix4d & initial_guess,
   Eigen::Matrix4d & result_pose)
 {
+  if (
+    map_manager_->submap_is_ready() &&
+    mapping_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+    local_map_ = mapping_future_.get();
+    registration_->setInputTarget(local_map_);
+    map_manager_->reset_flag();
+  }
+
   if (registration_->getInputTarget() == nullptr) {
     std::cerr << "not input target" << std::endl;
     return false;
@@ -223,77 +229,14 @@ bool LidarInertialOdometry::scan_matching(
   return true;
 }
 
-bool LidarInertialOdometry::is_map_update_required(const Eigen::Matrix4d & pose)
-{
-  bool is_map_update = false;
-
-  if (submaps_.empty()) {
-    is_map_update = true;
-  } else {
-    PointType query_point;
-    query_point.getVector3fMap() = pose.block<3, 1>(0, 3).cast<float>();
-
-    const Eigen::Vector3d candidate_pos = pose.block<3, 1>(0, 3);
-    const Eigen::Matrix3d candidate_rot = pose.block<3, 3>(0, 0);
-
-    std::vector<int> indices(1);
-    std::vector<float> distances(1);
-    if (kdtree_.nearestKSearch(query_point, 1, indices, distances)) {
-      Eigen::Vector3d closest_pos = submaps_[indices[0]].keyframe_pose.block<3, 1>(0, 3);
-      Eigen::Matrix3d closest_rot = submaps_[indices[0]].keyframe_pose.block<3, 3>(0, 0);
-
-      const double delta_p = (candidate_pos - closest_pos).norm();
-      const double delta_rot = Eigen::AngleAxisd(closest_rot.transpose() * candidate_rot).angle();
-
-      if (config_.translation_threshold < delta_p || config_.rotation_threshold < delta_rot) {
-        is_map_update = true;
-      }
-    }
-  }
-
-  return is_map_update;
-}
-
 bool LidarInertialOdometry::update_local_map(
-  const Eigen::Matrix4d & pose, const sensor_type::Lidar & lidar_points)
+  const Eigen::Matrix4d & pose, const sensor_type::Lidar & lidar_points, const bool first)
 {
-  bool is_map_updated = false;
-
-  if (is_map_update_required(pose)) {
-    PointCloudPtr crop_cloud(new PointCloud);
-    PointCloudPtr downsampling_submap_cloud(new PointCloud);
-
-    crop_.setInputCloud(lidar_points.raw_points);
-    crop_.filter(*crop_cloud);
-    map_voxel_grid_.setInputCloud(crop_cloud);
-    map_voxel_grid_.filter(*downsampling_submap_cloud);
-
-    submap::Submap submap(pose, downsampling_submap_cloud);
-    submaps_.emplace_back(submap);
-
-    // map_manager_->add_points(submap);
-    // local_map_ = map_manager_->get_local_map();
-    // registration_->setInputTarget(local_map_);
-    // is_map_updated = true;
-
-    PointType query_point;
-    query_point.getVector3fMap() = pose.block<3, 1>(0, 3).cast<float>();
-    keyframe_point_->points.emplace_back(query_point);
-    kdtree_.setInputCloud(keyframe_point_);
-
-    std::vector<int> indices;
-    std::vector<float> distances;
-
-    if (kdtree_.nearestKSearch(query_point, 5, indices, distances)) {
-      PointCloudPtr new_map(new PointCloud);
-      for (std::size_t idx = 0; idx < indices.size(); idx++) {
-        *new_map += *submaps_[indices[idx]].map_points;
-      }
-      local_map_ = new_map;
-
-      registration_->setInputTarget(new_map);
-
-      is_map_updated = true;
+  bool is_map_updated = map_manager_->is_map_update(pose);
+  if (is_map_updated) {
+    mapping_future_ = map_manager_->add_map_points(lidar_points, pose);
+    if (first) {
+      mapping_future_.wait();
     }
   }
 

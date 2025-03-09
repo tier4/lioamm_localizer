@@ -51,6 +51,9 @@ public:
   void callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg);
 
+  void publish_local_map(const double stamp);
+  void publish_message(const sensor_type::Measurement & measurement, const Eigen::Matrix4d & pose);
+
   bool get_transform(
     const std::string & target_frame, const std::string & source_frame,
     geometry_msgs::msg::TransformStamped & transformation);
@@ -71,7 +74,6 @@ public:
     return header.stamp.sec + header.stamp.nanosec / 1e9;
   }
 
-  void main_thread();
   void process();
 
 private:
@@ -88,7 +90,8 @@ private:
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
   std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
 
-  std::shared_ptr<std::thread> thread_;
+  std::thread publisher_thread_;
+  std::thread local_map_publisher_thread_;
   std::shared_ptr<LidarInertialOdometry> lio_;
 
   boost::circular_buffer<Sophus::SE3d> pose_buffer_;

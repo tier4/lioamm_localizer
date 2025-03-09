@@ -7,6 +7,7 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
   set(CMAKE_CXX_EXTENSIONS OFF)
+  set(CMAKE_CXX_FLAGS "-pg -O3 -Wall -Wextra -Wpedantic -Werror -fprofile-arcs -ftest-coverage")
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -24,6 +25,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/${PROJECT_NAME}.cpp
   src/eskf.cpp
   src/optimization.cpp
+  src/map_manager.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}

@@ -78,8 +78,7 @@ Eigen::Matrix4d Optimization::update(
   // IMU bias factor
   gtsam::BetweenFactor<gtsam::imuBias::ConstantBias> imu_bias_factor(
     B(key_ - 1), B(key_), gtsam::imuBias::ConstantBias(),
-    gtsam::noiseModel::Diagonal::Sigmas(
-      sqrt(imu_integration_ptr.deltaTij()) * imu_bias_noise_between_));
+    gtsam::noiseModel::Isotropic::Sigma(6, 1e-5));
 
   // add IMU factor
   graph.add(imu_factor);
