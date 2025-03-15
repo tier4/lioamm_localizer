@@ -46,17 +46,18 @@ public:
 
   std::future<PointCloudPtr> add_map_points(
     const sensor_type::Lidar & sensor_measurement, const Eigen::Matrix4d & keyframe_pose);
-  PointCloudPtr build_map_task(const submap::Submap & submap);
+  PointCloudPtr build_map_task(
+    const sensor_type::Lidar & sensor_measurement, const Eigen::Matrix4d & keyframe_pose);
 
   bool is_map_update(const Eigen::Matrix4d & pose);
 
-  inline bool submap_is_ready()
+  inline bool has_map_changed()
   {
     std::shared_lock<std::shared_mutex> lock(map_mutex_);
     return new_map_is_ready_;
   }
 
-  inline void reset_flag()
+  inline void reset()
   {
     std::unique_lock<std::shared_mutex> lock(map_mutex_);
     new_map_is_ready_ = false;
