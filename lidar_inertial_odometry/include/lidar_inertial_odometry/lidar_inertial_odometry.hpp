@@ -63,6 +63,10 @@ public:
 
     // IMU
     double imu_calibration_time;
+
+    // preprocessing
+    double min_distance;
+    double max_distance;
   };
 
   LidarInertialOdometry(LioConfig config = LioConfig());
@@ -98,6 +102,7 @@ public:
   bool update_local_map(
     const Eigen::Matrix4d & pose, const sensor_type::Lidar & lidar_points,
     const bool first = false);
+  void update_map_task(const submap::Submap & submap);
 
   inline void insert_points(const sensor_type::Lidar & points) { lidar_buffer_.push_back(points); }
   inline void insert_imu(const sensor_type::Imu & imu) { imu_buffer_.push_back(imu); }
@@ -118,7 +123,16 @@ private:
   std::shared_ptr<MapManager> map_manager_;
   std::shared_ptr<ImuIntegration> imu_integration_;
   std::shared_ptr<Optimization> optimization_;
-  std::shared_ptr<fast_gicp::FastGICP<PointType, PointType>> registration_;
+  // std::shared_ptr<pclomp::NormalDistributionsTransform<PointType, PointType>> registration_;
+  std::shared_ptr<fast_gicp::FastVGICP<PointType, PointType>> registration_;
+
+  // mapping thread
+  // std::thread mapping_task_thread_;
+  // std::mutex mapping_mutex_;
+  // std::packaged_task<void()> mapping_task_;
+  // std::future<void> mapping_future_;
+  // bool map_has_changed_{false};
+  // bool mapping_flag_{false};
 
   LioConfig config_;
 
@@ -128,9 +142,10 @@ private:
   pcl::VoxelGrid<PointType> scan_voxel_grid_;
   pcl::CropBox<PointType> crop_;
 
-  pcl::KdTreeFLANN<PointType> kdtree_;
+  pcl::KdTreeFLANN<PointType> kd_tree_;
   PointCloudPtr keyframe_point_;
 
+  std::vector<submap::Submap> submaps_;
   PointCloudPtr local_map_;
   Eigen::Matrix4d transformation_;
 

@@ -2,11 +2,11 @@
   <arg name="lio_config_path" default="$(find-pkg-share lidar_inertial_odometry)/config/lidar_inertial_odometry.params.yaml"/>
 
   <set_parameter name="use_sim_time" value="true"/>
-  <node pkg="lidar_inertial_odometry" exec="lidar_inertial_odometry_node" name="lidar_inertial_odometry"  output="screen" >
-    <remap from="points_raw" to="/sensing/lidar/left_upper/pointcloud_raw"/>
-    <remap from="imu_raw" to="/sensing/imu/tamagawa/imu_raw"/>
-    <!-- <remap from="points_raw" to="/os1_cloud_node/points"/> -->
-    <!-- <remap from="imu_raw" to="/os1_cloud_node/imu"/> -->
+  <node pkg="lidar_inertial_odometry" exec="lidar_inertial_odometry_node" name="lidar_inertial_odometry" output="screen" >
+    <!-- <remap from="points_raw" to="/sensing/lidar/left_upper/rectified/pointcloud_ex"/> -->
+    <!-- <remap from="imu_raw" to="/sensing/imu/tamagawa/imu_raw"/> -->
+    <remap from="points_raw" to="/os1_cloud_node/points"/>
+    <remap from="imu_raw" to="/os1_cloud_node/imu"/>
     <param from="$(var lio_config_path)"/>
   </node>
 

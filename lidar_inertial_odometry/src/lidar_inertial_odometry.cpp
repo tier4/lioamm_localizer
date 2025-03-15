@@ -18,8 +18,8 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
 : config_(config), transformation_(Eigen::Matrix4d::Identity())
 {
   // Registration
-  registration_ = std::make_shared<fast_gicp::FastGICP<PointType, PointType>>();
-  // registration_->setResolution(config.resolution);
+  registration_ = std::make_shared<fast_gicp::FastVGICP<PointType, PointType>>();
+  registration_->setResolution(config.resolution);
   registration_->setMaxCorrespondenceDistance(config.max_correspondence_distance);
   registration_->setCorrespondenceRandomness(config.correspondence_randomness);
   registration_->setTransformationEpsilon(config.transformation_epsilon);
@@ -53,6 +53,9 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
   optimization_ = std::make_shared<Optimization>(smoother_parameters);
 
   // IMU Integration
+  gtsam::ISAM2Params imu_integ_parameters;
+  imu_integ_parameters.relinearizeThreshold = 0.1;
+  imu_integ_parameters.relinearizeSkip = 1;
   ImuIntegration::ImuConfig imu_config;
   imu_config.accel_noise_sigma = 0.05;
   imu_config.gyro_noise_sigma = 0.02;
@@ -62,7 +65,7 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
   imu_config.gravity = -config.gravity;
   imu_config.reset_graph_key = 100;
   Eigen::VectorXd imu_bias(Eigen::VectorXd::Zero(6));
-  imu_integration_ = std::make_shared<ImuIntegration>(imu_config, imu_bias);
+  imu_integration_ = std::make_shared<ImuIntegration>(imu_config, imu_bias, imu_integ_parameters);
 
   local_map_.reset(new PointCloud);
   keyframe_point_.reset(new PointCloud);
@@ -121,11 +124,11 @@ void LidarInertialOdometry::initialize(sensor_type::Measurement & measurement)
     eskf_->initialize(initial_pose, initial_imu_bias, gravity, measurement.lidar_points.stamp);
 
     // IMU Integration
-    imu_integration_->initialize(measurement.imu_queue.back().stamp);
+    imu_integration_->initialize(
+      measurement.imu_queue.back().stamp, initial_pose, initial_imu_bias);
 
     // Factor Graph Optimization
-    optimization_->set_initial_value(
-      initial_pose, initial_imu_bias, measurement.lidar_points.stamp);
+    optimization_->set_initial_value(measurement.lidar_points.stamp, initial_pose);
 
     // Update Initial Local Map
     update_local_map(initial_pose, measurement.lidar_points, true);
@@ -138,9 +141,8 @@ void LidarInertialOdometry::initialize(sensor_type::Measurement & measurement)
 gtsam::NavState LidarInertialOdometry::predict(
   const double stamp, std::deque<sensor_type::Imu> imu_queue)
 {
-  imu_integration_->integrate(stamp, imu_queue, optimization_->get_bias());
-  const auto predict_state =
-    imu_integration_->predict(optimization_->get_state(), optimization_->get_bias());
+  imu_integration_->integrate(stamp, imu_queue);
+  const auto [predict_state, predict_bias] = imu_integration_->predict(transformation_);
 
   return predict_state;
 }
@@ -173,7 +175,8 @@ bool LidarInertialOdometry::update(
   }
 
   transformation_ = optimization_->update(
-    lidar_points.stamp, result_pose, imu_integration_->get_integrated_measurements());
+    lidar_points.stamp, result_pose, predict_state,
+    imu_integration_->get_integrated_measurements());
 
   return true;
 }

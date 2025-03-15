@@ -51,7 +51,8 @@ public:
   void callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg);
 
-  void publish_local_map(const double stamp);
+  void publish_local_map(
+    const sensor_type::Measurement & measurement, const Eigen::Matrix4d & pose);
   void publish_message(const sensor_type::Measurement & measurement, const Eigen::Matrix4d & pose);
 
   bool get_transform(

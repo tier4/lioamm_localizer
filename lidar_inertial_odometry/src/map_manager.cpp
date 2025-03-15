@@ -94,37 +94,49 @@ PointCloudPtr MapManager::build_map_task(const submap::Submap & submap)
   keyframe_points_->points.emplace_back(query_point);
   kd_tree_.setInputCloud(keyframe_points_);
 
-  for (const auto & point : submap.map_points->points) {
-    auto key = get_voxel_index(point.getVector3fMap());
-    if (voxel_map_.find(key) == voxel_map_.end()) {
-      voxel_map_[key] = Voxel(point, 1000);
-    } else {
-      voxel_map_[key].add_voxel(point);
+  // for (const auto & point : submap.map_points->points) {
+  //   auto key = get_voxel_index(point.getVector3fMap());
+  //   if (voxel_map_.find(key) == voxel_map_.end()) {
+  //     voxel_map_[key] = Voxel(point, 1000);
+  //   } else {
+  //     voxel_map_[key].add_voxel(point);
+  //   }
+  // }
+
+  // int local_submap_size = (int)submaps_.size() - max_submap_size_;
+  // if (0 <= local_submap_size) {
+  //   for (const auto & point : submaps_[local_submap_size].map_points->points) {
+  //     auto key = get_voxel_index(point.getVector3fMap());
+  //     if (voxel_map_.count(key)) {
+  //       voxel_map_.erase(key);
+  //     }
+  //   }
+  // }
+
+  // PointCloudPtr updated_cloud(new PointCloud);
+  // for (const auto & [key, points] : voxel_map_) {
+  //   auto mean = points.mean;
+  //   PointType p;
+  //   p.getVector3fMap() = mean;
+  //   updated_cloud->points.emplace_back(p);
+  // }
+
+  std::vector<int> indices;
+  std::vector<float> distances;
+
+  PointCloudPtr local_map(new PointCloud);
+  if (kd_tree_.nearestKSearch(query_point, max_submap_size_, indices, distances)) {
+    for (std::size_t i = 0; i < indices.size(); i++) {
+      *local_map += *submaps_[indices[i]].map_points;
     }
   }
 
-  int local_submap_size = (int)submaps_.size() - max_submap_size_;
-  if (0 <= local_submap_size) {
-    for (const auto & point : submaps_[local_submap_size].map_points->points) {
-      auto key = get_voxel_index(point.getVector3fMap());
-      if (voxel_map_.count(key)) {
-        voxel_map_.erase(key);
-      }
-    }
+  {
+    std::unique_lock<std::shared_mutex> lock(map_mutex_);
+    local_map_.reset(new PointCloud);
+    local_map_ = local_map;
+    new_map_is_ready_ = true;
   }
-
-  PointCloudPtr updated_cloud(new PointCloud);
-  for (const auto & [key, points] : voxel_map_) {
-    auto mean = points.mean;
-    PointType p;
-    p.getVector3fMap() = mean;
-    updated_cloud->points.emplace_back(p);
-  }
-
-  std::unique_lock<std::shared_mutex> lock(map_mutex_);
-  local_map_.reset(new PointCloud);
-  local_map_ = updated_cloud;
-  new_map_is_ready_ = true;
 
   return local_map_;
 }

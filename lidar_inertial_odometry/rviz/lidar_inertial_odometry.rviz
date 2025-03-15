@@ -5,7 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /TF1/Frames1
-      Splitter Ratio: 0.5
+      Splitter Ratio: 0.5411764979362488
     Tree Height: 1079
   - Class: rviz_common/Selection
     Name: Selection
@@ -24,7 +24,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: dense map
+    SyncSource: deskew scan
 Visualization Manager:
   Class: ""
   Displays:
@@ -51,194 +51,56 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        ars408_front_link:
+        camera_accel_frame:
           Value: true
-        base_link:
+        camera_accel_optical_frame:
           Value: true
-        camera0/camera_link:
+        camera_aligned_depth_to_color_frame:
           Value: true
-        camera0/camera_optical_link:
+        camera_aligned_depth_to_infra1_frame:
           Value: true
-        camera1/camera_link:
+        camera_color_frame:
           Value: true
-        camera1/camera_optical_link:
+        camera_color_optical_frame:
           Value: true
-        camera2/camera_link:
+        camera_depth_frame:
           Value: true
-        camera2/camera_optical_link:
+        camera_depth_optical_frame:
           Value: true
-        camera3/camera_link:
+        camera_gyro_frame:
           Value: true
-        camera3/camera_optical_link:
+        camera_gyro_optical_frame:
           Value: true
-        camera4/camera_link:
+        camera_infra1_frame:
           Value: true
-        camera4/camera_optical_link:
+        camera_infra1_optical_frame:
           Value: true
-        camera5/camera_link:
+        camera_infra2_frame:
           Value: true
-        camera5/camera_optical_link:
+        camera_infra2_optical_frame:
           Value: true
-        camera6/camera_link:
-          Value: true
-        camera6/camera_optical_link:
-          Value: true
-        camera7/camera_link:
-          Value: true
-        camera7/camera_optical_link:
-          Value: true
-        front_center/radar_link:
-          Value: true
-        front_left/radar_link:
-          Value: true
-        front_right/radar_link:
-          Value: true
-        front_unit_base_link:
-          Value: true
-        gnss_left_link:
-          Value: true
-        gnss_link:
-          Value: true
-        gnss_right_link:
+        camera_link:
           Value: true
         map:
           Value: true
-        pandar_40p_front:
+        os1_imu:
           Value: true
-        pandar_40p_front_base_link:
+        os1_lidar:
           Value: true
-        pandar_40p_left:
+        os1_sensor:
           Value: true
-        pandar_40p_left_base_link:
-          Value: true
-        pandar_40p_rear:
-          Value: true
-        pandar_40p_rear_base_link:
-          Value: true
-        pandar_40p_right:
-          Value: true
-        pandar_40p_right_base_link:
-          Value: true
-        pandar_qt_front:
-          Value: true
-        pandar_qt_front_base_link:
-          Value: true
-        pandar_qt_left:
-          Value: true
-        pandar_qt_left_base_link:
-          Value: true
-        pandar_qt_rear:
-          Value: true
-        pandar_qt_rear_base_link:
-          Value: true
-        pandar_qt_right:
-          Value: true
-        pandar_qt_right_base_link:
-          Value: true
-        rear_center/radar_link:
-          Value: true
-        rear_left/radar_link:
-          Value: true
-        rear_right/radar_link:
-          Value: true
-        rear_unit_base_link:
-          Value: true
-        tamagawa/imu_link:
-          Value: true
-        top_unit_base_link:
-          Value: true
-        traffic_light_camera/camera_link:
-          Value: true
-        traffic_light_camera/camera_optical_link:
-          Value: true
-        viewer:
-          Value: true
-      Marker Scale: 1
+      Marker Scale: 6
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
         map:
-          base_link:
-            ars408_front_link:
+          os1_sensor:
+            os1_imu:
               {}
-            front_unit_base_link:
-              camera6/camera_link:
-                camera6/camera_optical_link:
-                  {}
-              front_center/radar_link:
-                {}
-              front_left/radar_link:
-                {}
-              front_right/radar_link:
-                {}
-              pandar_40p_front_base_link:
-                pandar_40p_front:
-                  {}
-              pandar_qt_front_base_link:
-                pandar_qt_front:
-                  {}
-            gnss_link:
+            os1_lidar:
               {}
-            rear_unit_base_link:
-              camera3/camera_link:
-                camera3/camera_optical_link:
-                  {}
-              pandar_40p_rear_base_link:
-                pandar_40p_rear:
-                  {}
-              pandar_qt_rear_base_link:
-                pandar_qt_rear:
-                  {}
-              rear_center/radar_link:
-                {}
-              rear_left/radar_link:
-                {}
-              rear_right/radar_link:
-                {}
-            top_unit_base_link:
-              camera0/camera_link:
-                camera0/camera_optical_link:
-                  {}
-              camera1/camera_link:
-                camera1/camera_optical_link:
-                  {}
-              camera2/camera_link:
-                camera2/camera_optical_link:
-                  {}
-              camera4/camera_link:
-                camera4/camera_optical_link:
-                  {}
-              camera5/camera_link:
-                camera5/camera_optical_link:
-                  {}
-              camera7/camera_link:
-                camera7/camera_optical_link:
-                  {}
-              gnss_left_link:
-                {}
-              gnss_right_link:
-                {}
-              pandar_40p_left_base_link:
-                pandar_40p_left:
-                  {}
-              pandar_40p_right_base_link:
-                pandar_40p_right:
-                  {}
-              pandar_qt_left_base_link:
-                pandar_qt_left:
-                  {}
-              pandar_qt_right_base_link:
-                pandar_qt_right:
-                  {}
-              tamagawa/imu_link:
-                {}
-              traffic_light_camera/camera_link:
-                traffic_light_camera/camera_optical_link:
-                  {}
-          viewer:
-            {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -279,47 +141,13 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 9999
-      Enabled: true
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 255
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: dense map
-      Position Transformer: XYZ
-      Selectable: false
-      Size (Pixels): 1
-      Size (m): 0.05000000074505806
-      Style: Points
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Best Effort
-        Value: /deskew_scan
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: true
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 23.711013793945312
-        Min Value: -1.6515573263168335
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz_default_plugins/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: Intensity
-      Decay Time: 0
       Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 255
+      Max Intensity: 3653
       Min Color: 0; 0; 0
       Min Intensity: 0
-      Name: deskew scan
+      Name: dense map
       Position Transformer: XYZ
       Selectable: false
       Size (Pixels): 1
@@ -338,6 +166,40 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
+        Max Value: 23.711013793945312
+        Min Value: -1.6515573263168335
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 1880.5
+      Min Color: 0; 0; 0
+      Min Intensity: 13
+      Name: deskew scan
+      Position Transformer: XYZ
+      Selectable: false
+      Size (Pixels): 1
+      Size (m): 0.05000000074505806
+      Style: Points
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /deskew_scan
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
+    - Alpha: 0.10000000149011612
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
         Max Value: 10
         Min Value: -10
         Value: true
@@ -345,16 +207,16 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz_default_plugins/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: ""
-      Decay Time: 0
+      Color Transformer: Intensity
+      Decay Time: 9999
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 4096
+      Max Intensity: 2597
       Min Color: 0; 0; 0
-      Min Intensity: 0
+      Min Intensity: 12
       Name: local map
-      Position Transformer: ""
+      Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 1
       Size (m): 0.009999999776482582
@@ -391,8 +253,8 @@ Visualization Manager:
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
-      Line Style: Lines
-      Line Width: 0.029999999329447746
+      Line Style: Billboards
+      Line Width: 0.10000000149011612
       Name: odometry path
       Offset:
         X: 0
@@ -476,26 +338,21 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz_default_plugins/Orbit
-      Distance: 365.0748291015625
+      Angle: 0
+      Class: rviz_default_plugins/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Focal Point:
-        X: -6.259836196899414
-        Y: -22.1503849029541
-        Z: 6.273196220397949
-      Focal Shape Fixed Size: false
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6647971868515015
+      Scale: 5.910597324371338
       Target Frame: map
-      Value: Orbit (rviz_default_plugins)
-      Yaw: 3.076747179031372
+      Value: TopDownOrtho (rviz_default_plugins)
+      X: 82.7681884765625
+      Y: 77.83164978027344
     Saved: ~
 Window Geometry:
   Displays:

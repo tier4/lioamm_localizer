@@ -1,15 +1,15 @@
 /**:
   ros__parameters:
-    base_frame_id: base_link
+    base_frame_id: os1_sensor
     map_frame_id: map
 
-    publish_frequency: 10.0 # hz
+    publish_frequency: 20.0 # hz
 
     # smoother_type: Kalman Filter
     smoother_type: Factor Graph
 
     # Points Pre Processing
-    scan_voxel_size: 0.5
+    scan_voxel_size: 0.25
     crop_min_x: -1.0
     crop_max_x: 1.0
     crop_min_y: -1.0
@@ -17,6 +17,7 @@
     crop_min_z: -1.0
     crop_max_z: 1.0
     min_distance: 0.001
+    max_distance: 100.0
 
     # Scan Registration
     max_correspondence_distance: 2.0
@@ -36,11 +37,11 @@
     gravity: 9.80665
 
     # Local Map
-    translation_threshold: 5.0
+    translation_threshold: 1.0
     rotation_threshold: 45.0
-    voxel_map_resolution: 0.5
+    voxel_map_resolution: 0.25
     map_removal_distance: 100.0
     max_submap_size: 20
 
     # IMU
-    imu_calibration_time: 1.0
+    imu_calibration_time: 3.0

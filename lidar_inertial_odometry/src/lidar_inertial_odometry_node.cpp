@@ -55,6 +55,9 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
   config.translation_noise = this->declare_parameter<double>("translation_noise");
   config.rotation_noise = this->declare_parameter<double>("rotation_noise");
   config.gravity = this->declare_parameter<double>("gravity");
+  // Pre-Processing
+  config.min_distance = this->declare_parameter<double>("min_distance");
+  config.max_distance = this->declare_parameter<double>("max_distance");
   lio_ = std::make_shared<LidarInertialOdometry>(config);
 
   // Point Cloud Pre-Processing
@@ -168,8 +171,8 @@ void LidarInertialOdometryNode::process()
 
   // Local map update
   if (lio_->update_local_map(estimated_pose, measurement.lidar_points)) {
-    local_map_publisher_thread_ = std::thread(
-      &LidarInertialOdometryNode::publish_local_map, this, measurement.lidar_points.stamp);
+    local_map_publisher_thread_ =
+      std::thread(&LidarInertialOdometryNode::publish_local_map, this, measurement, estimated_pose);
     local_map_publisher_thread_.detach();
   }
 
@@ -179,14 +182,18 @@ void LidarInertialOdometryNode::process()
   publisher_thread_.detach();
 }
 
-void LidarInertialOdometryNode::publish_local_map(const double stamp)
+void LidarInertialOdometryNode::publish_local_map(
+  const sensor_type::Measurement & measurement, const Eigen::Matrix4d & pose)
 {
-  PointCloudPtr transform_cloud(new PointCloud);
-  transform_cloud = lio_->get_local_map();
+  const auto current_time_stamp = from_sec(measurement.lidar_points.stamp);
+
+  PointCloudPtr deskew_cloud(new PointCloud);
+  // pcl::transformPointCloud(*measurement.lidar_points.preprocessing_points, *deskew_cloud, pose);
+  deskew_cloud = lio_->get_local_map();
   sensor_msgs::msg::PointCloud2 local_map_msg;
-  pcl::toROSMsg(*transform_cloud, local_map_msg);
+  pcl::toROSMsg(*deskew_cloud, local_map_msg);
   local_map_msg.header.frame_id = map_frame_id_;
-  local_map_msg.header.stamp = from_sec(stamp);
+  local_map_msg.header.stamp = current_time_stamp;
   local_map_publisher_->publish(local_map_msg);
 }
 
@@ -196,7 +203,7 @@ void LidarInertialOdometryNode::publish_message(
   const auto current_time_stamp = from_sec(measurement.lidar_points.stamp);
 
   PointCloudPtr deskew_cloud(new PointCloud);
-  pcl::transformPointCloud(*measurement.lidar_points.raw_points, *deskew_cloud, pose);
+  pcl::transformPointCloud(*measurement.lidar_points.preprocessing_points, *deskew_cloud, pose);
   sensor_msgs::msg::PointCloud2 deskew_cloud_msg;
   pcl::toROSMsg(*deskew_cloud, deskew_cloud_msg);
   deskew_cloud_msg.header.frame_id = map_frame_id_;
@@ -277,11 +284,12 @@ void LidarInertialOdometryNode::callback_points(const sensor_msgs::msg::PointClo
     lioamm_localizer_utils::convert_transform_to_matrix(base_to_sensor));
 
   sensor_type::Lidar new_points;
-  new_points.stamp = rclcpp::Time(msg->header.stamp).seconds();
+  new_points.stamp = rclcpp::Time(msg->header.stamp).seconds();  // to_sec(msg->header);
   new_points.timestamp = lioamm_localizer_utils::normalize(timestamps);
   new_points.lidar_start_time = new_points.stamp;
   new_points.lidar_end_time = new_points.lidar_start_time + scan_duration;
   new_points.raw_points = base_to_sensor_cloud;
+  new_points.preprocessing_points = lio_->preprocessing(base_to_sensor_cloud);
 
   lio_->insert_points(new_points);
 }
@@ -297,7 +305,8 @@ void LidarInertialOdometryNode::callback_imu(const sensor_msgs::msg::Imu::Shared
     lioamm_localizer_utils::get_eigen_transform(base_to_imu);
 
   sensor_type::Imu imu_data;
-  imu_data.stamp = rclcpp::Time(msg->header.stamp).seconds();
+  imu_data.stamp =
+    rclcpp::Time(msg->header.stamp).seconds();  // rclcpp::Time(msg->header.stamp).seconds();
   imu_data.linear_acceleration =
     transform *
     Eigen::Vector3d(
