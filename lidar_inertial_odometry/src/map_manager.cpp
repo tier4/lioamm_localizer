@@ -62,8 +62,7 @@ void MapManager::task_runner()
 std::future<PointCloudPtr> MapManager::add_map_points(
   const sensor_type::Lidar & sensor_measurement, const Eigen::Matrix4d & keyframe_pose)
 {
-  submap::Submap submap(keyframe_pose, sensor_measurement.preprocessing_points);
-  auto function = std::bind(&MapManager::build_map_task, this, submap);
+  auto function = std::bind(&MapManager::build_map_task, this, sensor_measurement, keyframe_pose);
 
   auto task =
     std::make_shared<std::packaged_task<PointCloudPtr()>>([function]() { return function(); });
@@ -85,8 +84,13 @@ void MapManager::add_task_queue(F && task)
   task_queue_condition_.notify_one();
 }
 
-PointCloudPtr MapManager::build_map_task(const submap::Submap & submap)
+PointCloudPtr MapManager::build_map_task(
+  const sensor_type::Lidar & sensor_measurement, const Eigen::Matrix4d & keyframe_pose)
 {
+  PointCloudPtr downsample_cloud(new PointCloud);
+  voxel_grid_.setInputCloud(sensor_measurement.raw_points);
+  voxel_grid_.filter(*downsample_cloud);
+  submap::Submap submap(keyframe_pose, downsample_cloud);
   submaps_.push_back(submap);
 
   PointType query_point;

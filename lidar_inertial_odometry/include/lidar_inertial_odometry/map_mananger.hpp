@@ -46,7 +46,8 @@ public:
 
   std::future<PointCloudPtr> add_map_points(
     const sensor_type::Lidar & sensor_measurement, const Eigen::Matrix4d & keyframe_pose);
-  PointCloudPtr build_map_task(const submap::Submap & submap);
+  PointCloudPtr build_map_task(
+    const sensor_type::Lidar & sensor_measurement, const Eigen::Matrix4d & keyframe_pose);
 
   bool is_map_update(const Eigen::Matrix4d & pose);
 
