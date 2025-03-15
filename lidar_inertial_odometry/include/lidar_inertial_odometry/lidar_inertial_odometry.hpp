@@ -118,7 +118,7 @@ private:
   std::shared_ptr<MapManager> map_manager_;
   std::shared_ptr<ImuIntegration> imu_integration_;
   std::shared_ptr<Optimization> optimization_;
-  std::shared_ptr<fast_gicp::FastGICP<PointType, PointType>> registration_;
+  std::shared_ptr<fast_gicp::FastVGICP<PointType, PointType>> registration_;
 
   LioConfig config_;
 
@@ -135,7 +135,9 @@ private:
   Eigen::Matrix4d transformation_;
 
   bool initialized_{false};
+
   std::future<PointCloudPtr> mapping_future_;
+  bool mapping_task_is_ready_{false};
 };
 
 #endif

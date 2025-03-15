@@ -62,7 +62,7 @@ void MapManager::task_runner()
 std::future<PointCloudPtr> MapManager::add_map_points(
   const sensor_type::Lidar & sensor_measurement, const Eigen::Matrix4d & keyframe_pose)
 {
-  submap::Submap submap(keyframe_pose, sensor_measurement.raw_points);
+  submap::Submap submap(keyframe_pose, sensor_measurement.preprocessing_points);
   auto function = std::bind(&MapManager::build_map_task, this, submap);
 
   auto task =
@@ -94,37 +94,21 @@ PointCloudPtr MapManager::build_map_task(const submap::Submap & submap)
   keyframe_points_->points.emplace_back(query_point);
   kd_tree_.setInputCloud(keyframe_points_);
 
-  for (const auto & point : submap.map_points->points) {
-    auto key = get_voxel_index(point.getVector3fMap());
-    if (voxel_map_.find(key) == voxel_map_.end()) {
-      voxel_map_[key] = Voxel(point, 1000);
-    } else {
-      voxel_map_[key].add_voxel(point);
-    }
+  int submap_size = submaps_.size();
+  PointCloudPtr local_map(new PointCloud);
+  for (int idx = 0; idx < max_submap_size_; idx++) {
+    if ((submap_size - 1 - idx) < 0) continue;
+    *local_map += *submaps_[submap_size - 1 - idx].map_points;
   }
+  voxel_grid_.setInputCloud(local_map);
+  voxel_grid_.filter(*local_map);
 
-  int local_submap_size = (int)submaps_.size() - max_submap_size_;
-  if (0 <= local_submap_size) {
-    for (const auto & point : submaps_[local_submap_size].map_points->points) {
-      auto key = get_voxel_index(point.getVector3fMap());
-      if (voxel_map_.count(key)) {
-        voxel_map_.erase(key);
-      }
-    }
+  {
+    std::unique_lock<std::shared_mutex> lock(map_mutex_);
+    local_map_.reset(new PointCloud);
+    local_map_ = local_map;
+    new_map_is_ready_ = true;
   }
-
-  PointCloudPtr updated_cloud(new PointCloud);
-  for (const auto & [key, points] : voxel_map_) {
-    auto mean = points.mean;
-    PointType p;
-    p.getVector3fMap() = mean;
-    updated_cloud->points.emplace_back(p);
-  }
-
-  std::unique_lock<std::shared_mutex> lock(map_mutex_);
-  local_map_.reset(new PointCloud);
-  local_map_ = updated_cloud;
-  new_map_is_ready_ = true;
 
   return local_map_;
 }
