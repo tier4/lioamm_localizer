@@ -137,7 +137,6 @@ private:
   bool initialized_{false};
 
   std::future<PointCloudPtr> mapping_future_;
-  bool mapping_task_is_ready_{false};
 };
 
 #endif
