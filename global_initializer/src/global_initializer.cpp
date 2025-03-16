@@ -20,14 +20,27 @@ namespace global_initializer
 GlobalInitializer::GlobalInitializer(const rclcpp::NodeOptions & node_options)
 : Node("global_pose_initializer", node_options)
 {
-  this->declare_parameter<bool>("use_fpfh");
-  this->declare_parameter<double>("normal_estimation.search_radius");
-  this->declare_parameter<double>("fpfh.search_radius");
-  this->declare_parameter<std::string>("fpfh_map_path");
-  this->declare_parameter<bool>("load_fpfh_feature");
-  this->get_parameter<bool>("load_fpfh_feature", load_fpfh_feature_);
   this->declare_parameter<double>("map_downsample_leaf_size");
   this->declare_parameter<double>("sensor_downsample_leaf_size");
+
+  base_frame_id_ = this->declare_parameter<std::string>("base_frame_id");
+
+  num_particles_ = this->declare_parameter<int>("num_particles");
+  pos_noise_std_ = this->declare_parameter<double>("pos_noise_std");
+  yaw_noise_std_ = this->declare_parameter<double>("yaw_noise_std");
+
+  registration_ = std::make_shared<pclomp::NormalDistributionsTransform<PointType, PointType>>();
+  const double transformation_epsilon = this->declare_parameter<double>("transformation_epsilon");
+  const double step_size = this->declare_parameter<double>("step_size");
+  const double resolution = this->declare_parameter<double>("resolution");
+  const int max_iteration = this->declare_parameter<int>("max_iteration");
+  const int omp_num_thread = this->declare_parameter<int>("omp_num_thread");
+  registration_->setTransformationEpsilon(transformation_epsilon);
+  registration_->setStepSize(step_size);
+  registration_->setResolution(resolution);
+  registration_->setMaximumIterations(max_iteration);
+  registration_->setNeighborhoodSearchMethod(pclomp::KDTREE);
+  if (0 < omp_num_thread) registration_->setNumThreads(omp_num_thread);
 
   sensor_points_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "points_raw", rclcpp::SensorDataQoS().keep_last(10),
@@ -42,38 +55,13 @@ GlobalInitializer::GlobalInitializer(const rclcpp::NodeOptions & node_options)
 
   pose_publisher_ =
     this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("initialpose_3d", 5);
+  particle_publisher_ = this->create_publisher<geometry_msgs::msg::PoseArray>("particle_pose", 5);
 
   pose_initialize_srv_ = this->create_service<std_srvs::srv::Empty>(
     "global_initialize",
     std::bind(&GlobalInitializer::process, this, std::placeholders::_1, std::placeholders::_2));
-}
 
-PointCloudFPFHPtr GlobalInitializer::extract_fpfh(const PointCloudPtr & cloud)
-{
-  RCLCPP_INFO_STREAM(this->get_logger(), "extract fpfh");
-  double normal_estimation_radius;
-  this->get_parameter<double>("normal_estimation.search_radius", normal_estimation_radius);
-  double fpfh_search_radius;
-  this->get_parameter<double>("fpfh.search_radius", fpfh_search_radius);
-
-  RCLCPP_INFO_STREAM(this->get_logger(), "Normal Estimation");
-  pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
-  pcl::NormalEstimationOMP<PointType, pcl::Normal> normal_estimation;
-  normal_estimation.setRadiusSearch(normal_estimation_radius);
-  pcl::search::KdTree<PointType>::Ptr kdtree(new pcl::search::KdTree<PointType>);
-  normal_estimation.setSearchMethod(kdtree);
-  normal_estimation.setInputCloud(cloud);
-  normal_estimation.compute(*normals);
-
-  RCLCPP_INFO_STREAM(this->get_logger(), "FPFH Estimation");
-  pcl::FPFHEstimationOMP<PointType, pcl::Normal, pcl::FPFHSignature33> fpfh_estimation;
-  PointCloudFPFHPtr features(new PointCloudFPFH);
-  fpfh_estimation.setRadiusSearch(fpfh_search_radius);
-  fpfh_estimation.setInputCloud(cloud);
-  fpfh_estimation.setInputNormals(normals);
-  fpfh_estimation.compute(*features);
-
-  return features;
+  broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 }
 
 void GlobalInitializer::downsample(
@@ -90,59 +78,8 @@ void GlobalInitializer::process(
   const std::shared_ptr<std_srvs::srv::Empty::Request> request,
   const std::shared_ptr<std_srvs::srv::Empty::Response> response)
 {
+  // TODO
   RCLCPP_INFO_STREAM(this->get_logger(), "global initialize...");
-
-  PointCloudPtr sensor_points(new PointCloud);
-  PointCloudPtr filtered_points(new PointCloud);
-  pcl::fromROSMsg(sensor_points_msg, *sensor_points);
-
-  double sensor_downsample_leaf_size;
-  get_parameter<double>("sensor_downsample_leaf_size", sensor_downsample_leaf_size);
-  downsample(sensor_points, filtered_points, sensor_downsample_leaf_size);
-
-  teaser::PointCloud source_cloud;
-  for (std::size_t i = 0; i < filtered_points->size(); i++) {
-    source_cloud.push_back(
-      {filtered_points->at(i).x, filtered_points->at(i).y, filtered_points->at(i).z});
-  }
-
-  teaser::FPFHCloud::Ptr source_feature = extract_fpfh(filtered_points);
-
-  teaser::Matcher matcher;
-  auto correspondences = matcher.calculateCorrespondences(
-    source_cloud, target_cloud_, *source_feature, *target_feature_, false, false, false, 0.95);
-
-  teaser::RobustRegistrationSolver::Params params;
-  params.noise_bound = 0.5;
-  params.cbar2 = 1;
-  params.estimate_scaling = false;
-  params.rotation_max_iterations = 100;
-  params.rotation_gnc_factor = 1.4;
-  params.rotation_estimation_algorithm =
-    teaser::RobustRegistrationSolver::ROTATION_ESTIMATION_ALGORITHM::GNC_TLS;
-  params.rotation_cost_threshold = 0.005;
-
-  RCLCPP_INFO_STREAM(this->get_logger(), "Solve Registration");
-  teaser::RobustRegistrationSolver solver(params);
-  solver.solve(source_cloud, target_cloud_, correspondences);
-  RCLCPP_INFO_STREAM(this->get_logger(), "Finish Solve");
-
-  auto solution = solver.getSolution();
-  auto translation = solution.translation;
-  auto rotation = solution.rotation;
-  Eigen::Quaterniond quaternion(rotation);
-
-  geometry_msgs::msg::PoseWithCovarianceStamped pose_msg;
-  pose_msg.header.frame_id = "map";
-  pose_msg.header.stamp = now();
-  pose_msg.pose.pose.position.x = translation.x();
-  pose_msg.pose.pose.position.y = translation.y();
-  pose_msg.pose.pose.position.z = translation.z();
-  pose_msg.pose.pose.orientation.x = quaternion.x();
-  pose_msg.pose.pose.orientation.y = quaternion.y();
-  pose_msg.pose.pose.orientation.z = quaternion.z();
-  pose_msg.pose.pose.orientation.w = quaternion.w();
-  pose_publisher_->publish(pose_msg);
 }
 
 void GlobalInitializer::callback_global_map(const sensor_msgs::msg::PointCloud2 & msg)
@@ -157,37 +94,129 @@ void GlobalInitializer::callback_global_map(const sensor_msgs::msg::PointCloud2 
   downsample(map, global_map_, map_downsample_leaf_size);
 
   kd_tree_.setInputCloud(global_map_);
+  registration_->setInputTarget(global_map_);
 
-  bool use_fpfh;
-  this->get_parameter<bool>("use_fpfh", use_fpfh);
-  if (use_fpfh) {
-    for (std::size_t i = 0; i < global_map_->size(); i++) {
-      target_cloud_.push_back({global_map_->at(i).x, global_map_->at(i).y, global_map_->at(i).z});
-    }
-
-    std::string fpfh_map_path;
-    get_parameter<std::string>("fpfh_map_path", fpfh_map_path);
-    if (load_fpfh_feature_) {
-      RCLCPP_INFO_STREAM(this->get_logger(), "Load FPFH Feature Map.");
-
-      target_feature_.reset(new teaser::FPFHCloud);
-      if (pcl::io::loadPCDFile<pcl::FPFHSignature33>(fpfh_map_path, *target_feature_) == -1) {
-        RCLCPP_ERROR_STREAM(this->get_logger(), "Couldn't read file: " << fpfh_map_path.c_str());
-        return;
-      }
-      RCLCPP_INFO_STREAM(this->get_logger(), "Load Finish.");
-    } else {
-      target_feature_ = extract_fpfh(global_map_);
-      RCLCPP_INFO_STREAM(this->get_logger(), "output fpfh feature");
-      pcl::io::savePCDFile(fpfh_map_path, *target_feature_);
-    }
-  }
   RCLCPP_INFO_STREAM(this->get_logger(), "map loaded.");
 }
 
 void GlobalInitializer::callback_sensor_points(const sensor_msgs::msg::PointCloud2 & msg)
 {
-  sensor_points_msg = msg;
+  geometry_msgs::msg::TransformStamped base_to_sensor;
+  if (!get_transform(base_frame_id_, msg.header.frame_id, base_to_sensor)) {
+    RCLCPP_ERROR_STREAM(this->get_logger(), "Cannot get transform base_link to sensor_link.");
+    return;
+  }
+
+  if (sensor_points_ptr_ == nullptr) {
+    sensor_points_ptr_.reset(new PointCloud);
+  }
+
+  PointCloudPtr input_cloud_ptr(new PointCloud);
+  pcl::fromROSMsg(msg, *input_cloud_ptr);
+
+  PointCloudPtr base_to_sensor_points(new PointCloud);
+  pcl::transformPointCloud(
+    *input_cloud_ptr, *base_to_sensor_points,
+    lioamm_localizer_utils::convert_transform_to_matrix(base_to_sensor));
+
+  double sensor_downsample_leaf_size;
+  get_parameter<double>("sensor_downsample_leaf_size", sensor_downsample_leaf_size);
+  downsample(base_to_sensor_points, sensor_points_ptr_, sensor_downsample_leaf_size);
+}
+
+bool GlobalInitializer::estimator(
+  const geometry_msgs::msg::PoseWithCovarianceStamped & pose,
+  const PointCloudPtr & sensor_points_ptr,
+  geometry_msgs::msg::PoseWithCovarianceStamped & estimated_pose)
+{
+  if (registration_->getInputTarget() == nullptr) {
+    return false;
+  }
+
+  bool is_success = false;
+
+  registration_->setInputSource(sensor_points_ptr);
+
+  PointType query_point;
+  query_point.x = pose.pose.pose.position.x;
+  query_point.y = pose.pose.pose.position.y;
+  query_point.z = pose.pose.pose.position.z;
+
+  std::vector<int> idx(1);
+  std::vector<float> dist(1);
+  std::vector<RegistrationResult> results;
+  std::vector<geometry_msgs::msg::Pose> initial_pose_lists;
+
+  if (kd_tree_.nearestKSearch(query_point, 1, idx, dist)) {
+    geometry_msgs::msg::Pose initial_pose;
+    initial_pose.position.x = query_point.x;
+    initial_pose.position.y = query_point.y;
+    initial_pose.position.z = global_map_->points[idx[0]].z;
+    initial_pose.orientation = pose.pose.pose.orientation;
+
+    Eigen::Vector3d euler =
+      lioamm_localizer_utils::convert_quaternion_to_euler(initial_pose.orientation);
+
+    std::random_device random;
+    auto generator = std::mt19937(random());
+
+    std::normal_distribution<double> position_dist(0.0, pos_noise_std_);
+    std::normal_distribution<double> yaw_dist(0.0, yaw_noise_std_);
+    for (int i = 0; i < num_particles_; i++) {
+      geometry_msgs::msg::Pose particle_pose = initial_pose;
+      particle_pose.position.x += position_dist(generator);
+      particle_pose.position.y += position_dist(generator);
+
+      Eigen::Vector3d initial_euler = euler;
+      initial_euler.z() += yaw_dist(generator);
+
+      auto initial_quaternion = lioamm_localizer_utils::convert_euler_to_quaternion(initial_euler);
+      particle_pose.orientation.x = initial_quaternion.x();
+      particle_pose.orientation.y = initial_quaternion.y();
+      particle_pose.orientation.z = initial_quaternion.z();
+      particle_pose.orientation.w = initial_quaternion.w();
+
+      Eigen::Matrix4f initial_pose_matrix =
+        lioamm_localizer_utils::convert_pose_to_matrix(particle_pose);
+
+      PointCloudPtr output_cloud(new PointCloud);
+      registration_->align(*output_cloud, initial_pose_matrix);
+      if (!registration_->hasConverged()) {
+        continue;
+      }
+
+      Eigen::Matrix4f transformation = registration_->getFinalTransformation();
+      const double score = registration_->getNearestVoxelTransformationLikelihood();
+
+      RegistrationResult result;
+      result.score = score;
+      result.pose = lioamm_localizer_utils::convert_matrix_to_pose(transformation);
+      results.emplace_back(result);
+      initial_pose_lists.emplace_back(particle_pose);
+    }
+
+    if (!results.empty()) {
+      auto best_particle = std::max_element(
+        results.begin(), results.end(),
+        [](const RegistrationResult & a, const RegistrationResult & b) {
+          return a.score < b.score;
+        });
+
+      geometry_msgs::msg::PoseArray particle_array;
+      for (auto pose : initial_pose_lists) {
+        particle_array.poses.emplace_back(pose);
+      }
+      particle_array.header = pose.header;
+      particle_publisher_->publish(particle_array);
+
+      estimated_pose = pose;
+      estimated_pose.pose.pose = best_particle->pose;
+
+      is_success = true;
+    }
+  }
+
+  return is_success;
 }
 
 void GlobalInitializer::callback_initial_pose(
@@ -195,27 +224,32 @@ void GlobalInitializer::callback_initial_pose(
 {
   RCLCPP_INFO_STREAM(this->get_logger(), "callback initial pose.");
   if (global_map_ == nullptr) {
+    RCLCPP_ERROR_STREAM(this->get_logger(), "Global Map is not set.");
+    return;
+  }
+  if (sensor_points_ptr_ == nullptr) {
+    RCLCPP_ERROR_STREAM(this->get_logger(), "Sensor Points is not set.");
     return;
   }
 
-  PointType query_point;
-  query_point.x = msg->pose.pose.position.x;
-  query_point.y = msg->pose.pose.position.y;
-  query_point.z = msg->pose.pose.position.z;
-
-  std::vector<int> idx(1);
-  std::vector<float> dist(1);
-
-  RCLCPP_INFO_STREAM(this->get_logger(), "running kdtree search...");
-  if (kd_tree_.nearestKSearch(query_point, 1, idx, dist)) {
-    geometry_msgs::msg::PoseWithCovarianceStamped result_pose;
-    result_pose = *msg;
-    result_pose.pose.pose.position.z = global_map_->points[idx[0]].z;
+  RCLCPP_INFO_STREAM(this->get_logger(), "running initial pose search...");
+  geometry_msgs::msg::PoseWithCovarianceStamped result_pose;
+  if (estimator(*msg, sensor_points_ptr_, result_pose)) {
     pose_publisher_->publish(result_pose);
-    RCLCPP_INFO_STREAM(this->get_logger(), "publish initial pose.");
-  } else {
-    RCLCPP_WARN_STREAM(this->get_logger(), "can not found result of kdtree search.");
   }
+}
+
+bool GlobalInitializer::get_transform(
+  const std::string & target_frame, const std::string & source_frame,
+  geometry_msgs::msg::TransformStamped & transformation)
+{
+  try {
+    transformation = tf_buffer_.lookupTransform(target_frame, source_frame, tf2::TimePointZero);
+  } catch (tf2::TransformException & ex) {
+    RCLCPP_ERROR(get_logger(), "%s", ex.what());
+    return false;
+  }
+  return true;
 }
 
 }  // namespace global_initializer

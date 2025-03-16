@@ -122,6 +122,14 @@ inline Eigen::Quaterniond convert_euler_to_quaternion(const Eigen::Vector3d & eu
   return Eigen::Quaterniond(angle_axis);
 }
 
+inline Eigen::Vector3d convert_quaternion_to_euler(
+  const geometry_msgs::msg::Quaternion & quaternion)
+{
+  Eigen::Quaterniond quaternion_eigen(quaternion.w, quaternion.x, quaternion.y, quaternion.z);
+
+  return convert_matrix_to_euler(quaternion_eigen.toRotationMatrix());
+}
+
 inline Eigen::Matrix3d convert_euler_to_rotation_matrix(const Eigen::Vector3d & euler)
 {
   return convert_euler_to_quaternion(euler).toRotationMatrix();
