@@ -82,6 +82,9 @@ Eigen::Matrix4d Optimization::update(
   smoother_ptr_->update();
 
   const auto result = smoother_ptr_->calculateEstimate();
+
+  covariance_ = smoother_ptr_->marginalCovariance(gtsam::Symbol('x', key_));
+
   latest_state_ =
     gtsam::NavState(result.at<gtsam::Pose3>(X(key_)), result.at<gtsam::Vector3>(V(key_)));
   lidar_odom_buffer_.push_back(latest_state_.pose());

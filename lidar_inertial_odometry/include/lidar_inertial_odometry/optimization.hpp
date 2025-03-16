@@ -21,11 +21,13 @@
 
 #include <boost/circular_buffer.hpp>
 
+#include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/navigation/ImuFactor.h>
 #include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
+#include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam_unstable/nonlinear/BatchFixedLagSmoother.h>
@@ -59,11 +61,13 @@ public:
   void set_initial_value(const double & timestamp, const Eigen::Matrix4d & initial_pose);
 
   [[nodiscard]] gtsam::NavState get_state() { return latest_state_; }
+  [[nodiscard]] gtsam::Matrix6 get_covariance() { return covariance_; }
 
 private:
   std::shared_ptr<gtsam::IncrementalFixedLagSmoother> smoother_ptr_;
 
   gtsam::NavState latest_state_;
+  gtsam::Matrix6 covariance_;
 
   boost::circular_buffer<gtsam::Pose3> lidar_odom_buffer_;
 
