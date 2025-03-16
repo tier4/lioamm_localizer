@@ -20,6 +20,7 @@
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -52,7 +53,9 @@ public:
   void callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg);
 
   void publish_local_map(const double stamp);
-  void publish_message(const sensor_type::Measurement & measurement, const Eigen::Matrix4d & pose);
+  void publish_message(
+    const sensor_type::Measurement & measurement, const Eigen::Matrix4d & pose,
+    const Eigen::Matrix<double, 6, 6> & covariance);
 
   bool get_transform(
     const std::string & target_frame, const std::string & source_frame,
@@ -80,6 +83,8 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr points_subscriber_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscriber_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_stamped_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
+    pose_with_covariance_stamped_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr local_map_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr deskew_scan_publisher_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr odometry_path_publisher_;

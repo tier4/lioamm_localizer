@@ -1,11 +1,13 @@
 global_initializer:
   ros__parameters:
-    use_fpfh: false
-    normal_estimation:
-      search_radius: 2.0
-    fpfh:
-      search_radius: 4.0
-    map_downsample_leaf_size: 0.5
-    sensor_downsample_leaf_size: 0.5
-    load_fpfh_feature: false
-    fpfh_map_path: /tmp/fpfh_features.pcd
+    map_downsample_leaf_size: 0.2
+    sensor_downsample_leaf_size: 3.0
+    base_frame_id: base_link
+    num_particles: 100
+    pos_noise_std: 1.0
+    yaw_noise_std: 0.2
+    transformation_epsilon: 0.01
+    step_size: 0.1
+    resolution: 2.0
+    max_iteration: 30
+    omp_num_thread: 4

@@ -172,9 +172,8 @@ void MapMatcher::callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr 
         map_matching_fail_ = false;
       }
     }
-    // return;
   }
-  const auto current_time_stamp = this->now();
+  const auto current_time_stamp = msg->header.stamp;
   geometry_msgs::msg::PoseStamped estimated_pose_msg;
   estimated_pose_msg.header.stamp = lidar_time_stamp;
   estimated_pose_msg.header.frame_id = map_frame_id_;

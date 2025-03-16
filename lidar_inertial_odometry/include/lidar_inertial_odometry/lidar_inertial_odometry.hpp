@@ -109,6 +109,7 @@ public:
   PointCloudPtr preprocessing(const PointCloudPtr & cloud_in);
 
   inline Eigen::Matrix4d get_result() { return transformation_; }
+  inline Eigen::Matrix<double, 6, 6> get_covariance() { return covariance_; }
 
   inline PointCloudPtr get_local_map() { return local_map_; }
 
@@ -133,6 +134,7 @@ private:
 
   PointCloudPtr local_map_;
   Eigen::Matrix4d transformation_;
+  Eigen::Matrix<double, 6, 6> covariance_;
 
   bool initialized_{false};
 

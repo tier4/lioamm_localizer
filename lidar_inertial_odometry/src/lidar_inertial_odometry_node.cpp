@@ -92,6 +92,9 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
 
   pose_stamped_publisher_ =
     this->create_publisher<geometry_msgs::msg::PoseStamped>("pose_stamped", 10);
+  pose_with_covariance_stamped_publisher_ =
+    this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
+      "pose_with_covariance_stamped", 10);
   local_map_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "local_map", rclcpp::QoS{1}.transient_local());
   deskew_scan_publisher_ =
@@ -165,6 +168,7 @@ void LidarInertialOdometryNode::process()
   pose_buffer_.push_back(Sophus::SE3d(
     Eigen::Quaterniond(estimated_pose.block<3, 3>(0, 0)).normalized().toRotationMatrix(),
     estimated_pose.block<3, 1>(0, 3)));
+  Eigen::Matrix<double, 6, 6> covariance = lio_->get_covariance();
 
   // Local map update
   if (lio_->update_local_map(estimated_pose, measurement.lidar_points)) {
@@ -174,8 +178,8 @@ void LidarInertialOdometryNode::process()
   }
 
   // Publish ROS Message
-  publisher_thread_ =
-    std::thread(&LidarInertialOdometryNode::publish_message, this, measurement, estimated_pose);
+  publisher_thread_ = std::thread(
+    &LidarInertialOdometryNode::publish_message, this, measurement, estimated_pose, covariance);
   publisher_thread_.detach();
 }
 
@@ -191,7 +195,8 @@ void LidarInertialOdometryNode::publish_local_map(const double stamp)
 }
 
 void LidarInertialOdometryNode::publish_message(
-  const sensor_type::Measurement & measurement, const Eigen::Matrix4d & pose)
+  const sensor_type::Measurement & measurement, const Eigen::Matrix4d & pose,
+  const Eigen::Matrix<double, 6, 6> & covariance)
 {
   const auto current_time_stamp = from_sec(measurement.lidar_points.stamp);
 
@@ -208,6 +213,16 @@ void LidarInertialOdometryNode::publish_message(
   estimated_pose_msg.header.stamp = current_time_stamp;
   estimated_pose_msg.pose = lioamm_localizer_utils::convert_matrix_to_pose(pose.cast<float>());
   pose_stamped_publisher_->publish(estimated_pose_msg);
+
+  geometry_msgs::msg::PoseWithCovarianceStamped estimated_pose_with_covariance;
+  estimated_pose_with_covariance.header = estimated_pose_msg.header;
+  estimated_pose_with_covariance.pose.pose = estimated_pose_msg.pose;
+  for (int i = 0; i < 6; i++) {
+    for (int j = 0; j < 6; j++) {
+      estimated_pose_with_covariance.pose.covariance[i * 6 + j] = covariance(i, j);
+    }
+  }
+  pose_with_covariance_stamped_publisher_->publish(estimated_pose_with_covariance);
 
   odometry_path_.poses.emplace_back(estimated_pose_msg);
   odometry_path_.header.frame_id = map_frame_id_;

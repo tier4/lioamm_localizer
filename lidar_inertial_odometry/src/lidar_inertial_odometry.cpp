@@ -176,6 +176,7 @@ bool LidarInertialOdometry::update(
   }
 
   transformation_ = optimization_->update(lidar_points.stamp, result_pose, predict_state);
+  covariance_ = optimization_->get_covariance();
 
   return true;
 }
