@@ -80,7 +80,9 @@ public:
     crop_.setMax(max);
   }
 
-  void initialize(sensor_type::Measurement & measurement);
+  bool is_initialized() { return initialized_; }
+  void initialize(const sensor_type::Measurement & measurement);
+  bool imu_static_calibration(const std::deque<sensor_type::Imu> & imu);
 
   gtsam::NavState predict(const double stamp, std::deque<sensor_type::Imu> imu_queue);
   std::vector<Sophus::SE3d> predict(sensor_type::Measurement & measurement);
@@ -101,8 +103,6 @@ public:
 
   inline void insert_points(const sensor_type::Lidar & points) { lidar_buffer_.push_back(points); }
   inline void insert_imu(const sensor_type::Imu & imu) { imu_buffer_.push_back(imu); }
-
-  inline bool is_initialized() { return initialized_; }
 
   bool sync_measurement(sensor_type::Measurement & measurement);
 
@@ -134,6 +134,7 @@ private:
 
   PointCloudPtr local_map_;
   Eigen::Matrix4d transformation_;
+  Eigen::Vector<double, 6> imu_bias_;
   Eigen::Matrix<double, 6, 6> covariance_;
 
   bool initialized_{false};

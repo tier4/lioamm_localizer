@@ -51,6 +51,7 @@ public:
 
   void callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg);
+  void callback_initial_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
 
   void publish_local_map(const double stamp);
   void publish_message(
@@ -82,6 +83,9 @@ public:
 private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr points_subscriber_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscriber_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
+    initial_pose_subscriber_;
+
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_stamped_publisher_;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
     pose_with_covariance_stamped_publisher_;

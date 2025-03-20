@@ -297,6 +297,7 @@ void LidarInertialOdometryNode::callback_points(const sensor_msgs::msg::PointClo
   new_points.lidar_start_time = new_points.stamp;
   new_points.lidar_end_time = new_points.lidar_start_time + scan_duration;
   new_points.raw_points = base_to_sensor_cloud;
+  new_points.preprocessing_points = lio_->preprocessing(base_to_sensor_cloud);
 
   lio_->insert_points(new_points);
 }
