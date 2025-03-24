@@ -37,11 +37,11 @@ void Optimization::set_initial_value(const double & timestamp, const Eigen::Matr
 
   gtsam::NonlinearFactorGraph graph;
   graph.add(gtsam::PriorFactor<gtsam::Pose3>(X(key_), prior_pose, pose_noise_model));
-  // graph.add(gtsam::PriorFactor<gtsam::Vector3>(V(key_), prior_velocity, velocity_noise_model));
+  graph.add(gtsam::PriorFactor<gtsam::Vector3>(V(key_), prior_velocity, velocity_noise_model));
 
   gtsam::FixedLagSmoother::KeyTimestampMap new_timestamp;
   new_timestamp[X(key_)] = timestamp;
-  // new_timestamp[V(key_)] = timestamp;
+  new_timestamp[V(key_)] = timestamp;
 
   smoother_ptr_->update(graph, initial_values);
   smoother_ptr_->update();
@@ -51,7 +51,7 @@ void Optimization::set_initial_value(const double & timestamp, const Eigen::Matr
 
 Eigen::Matrix4d Optimization::update(
   const double & timestamp, const Eigen::Matrix4d & lidar_pose_matrix,
-  const gtsam::NavState & predict_state, const double & fitness_score)
+  const gtsam::NavState & predict_state)
 {
   key_++;
   gtsam::NonlinearFactorGraph graph;
@@ -68,15 +68,15 @@ Eigen::Matrix4d Optimization::update(
 
   gtsam::PriorFactor<gtsam::Vector3> predict_velocity(
     V(key_), predict_state.v(), gtsam::noiseModel::Isotropic::Precision(3, 1e3));
-  // graph.add(predict_velocity);
+  graph.add(predict_velocity);
 
   gtsam::Values initial_values;
   initial_values.insert(X(key_), pose_to);
-  // initial_values.insert(V(key_), predict_state.v());
+  initial_values.insert(V(key_), predict_state.v());
 
   gtsam::FixedLagSmoother::KeyTimestampMap new_timestamp;
   new_timestamp[X(key_)] = timestamp;
-  // new_timestamp[V(key_)] = timestamp;
+  new_timestamp[V(key_)] = timestamp;
 
   smoother_ptr_->update(graph, initial_values);
   smoother_ptr_->update();
