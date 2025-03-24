@@ -55,7 +55,7 @@ public:
 
   [[nodiscard]] Eigen::Matrix4d update(
     const double & timestamp, const Eigen::Matrix4d & lidar_pose_matrix,
-    const gtsam::NavState & predict_state);
+    const gtsam::NavState & predict_state, const double & fitness_score);
 
   void set_initial_value(const Eigen::Matrix4d & initial_pose, const double & timestamp);
   void set_initial_value(const double & timestamp, const Eigen::Matrix4d & initial_pose);

@@ -89,6 +89,10 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
   imu_subscriber_ = this->create_subscription<sensor_msgs::msg::Imu>(
     "imu_raw", rclcpp::SensorDataQoS(),
     std::bind(&LidarInertialOdometryNode::callback_imu, this, std::placeholders::_1), imu_sub_opt);
+  initial_pose_subscriber_ =
+    this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+      "initialpose_3d", 10,
+      std::bind(&LidarInertialOdometryNode::callback_initial_pose, this, std::placeholders::_1));
 
   pose_stamped_publisher_ =
     this->create_publisher<geometry_msgs::msg::PoseStamped>("pose_stamped", 10);
@@ -172,9 +176,9 @@ void LidarInertialOdometryNode::process()
 
   // Local map update
   if (lio_->update_local_map(estimated_pose, measurement.lidar_points)) {
-    local_map_publisher_thread_ = std::thread(
-      &LidarInertialOdometryNode::publish_local_map, this, measurement.lidar_points.stamp);
-    local_map_publisher_thread_.detach();
+    // local_map_publisher_thread_ = std::thread(
+    //   &LidarInertialOdometryNode::publish_local_map, this, measurement.lidar_points.stamp);
+    // local_map_publisher_thread_.detach();
   }
 
   // Publish ROS Message
@@ -323,6 +327,15 @@ void LidarInertialOdometryNode::callback_imu(const sensor_msgs::msg::Imu::Shared
     Eigen::Vector3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
 
   lio_->insert_imu(imu_data);
+}
+
+void LidarInertialOdometryNode::callback_initial_pose(
+  const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
+{
+  sensor_type::Pose pose;
+  pose.stamp = rclcpp::Time(msg->header.stamp).seconds();
+  pose.pose = lioamm_localizer_utils::convert_pose_to_matrix(msg->pose.pose).cast<double>();
+  lio_->insert_initial_pose(pose);
 }
 
 bool LidarInertialOdometryNode::get_transform(

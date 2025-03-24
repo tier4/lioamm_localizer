@@ -48,9 +48,9 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
 
   // Optimization
   gtsam::ISAM2Params smoother_parameters;
-  smoother_parameters.relinearizeThreshold = 0.1;
+  smoother_parameters.relinearizeThreshold = 0.01;
   smoother_parameters.relinearizeSkip = 1;
-  smoother_parameters.factorization = gtsam::ISAM2Params::Factorization::QR;
+  smoother_parameters.factorization = gtsam::ISAM2Params::Factorization::CHOLESKY;
   optimization_ = std::make_shared<Optimization>(smoother_parameters);
 
   // IMU Integration
@@ -118,10 +118,16 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
   if (!imu_static_calibration(measurement.imu_queue)) {
     return;
   }
+  if (initial_pose_buffer_.empty()) {
+    return;
+  }
+
   imu_bias_.head<3>() = imu_->get_acc_mean();
   imu_bias_.tail<3>() = imu_->get_gyro_mean();
 
-  transformation_.block<3, 3>(0, 0) = imu_->get_initial_orientation();
+  // transformation_.block<3, 3>(0, 0) = imu_->get_initial_orientation();
+  transformation_ = initial_pose_buffer_.front().pose;
+  initial_pose_buffer_.pop_front();
 
   // Kalman Filter
   eskf_->initialize(
@@ -171,12 +177,13 @@ bool LidarInertialOdometry::update(
 
   Eigen::Matrix4d result_pose;
   if (!scan_matching(
-        lidar_points.preprocessing_points, predict_state.pose().matrix().cast<double>(),
-        result_pose)) {
-    return false;
+        lidar_points.preprocessing_points, predict_state.pose().matrix(), result_pose)) {
+    // return false;
+    result_pose = predict_state.pose().matrix();
   }
 
-  transformation_ = optimization_->update(lidar_points.stamp, result_pose, predict_state);
+  transformation_ = optimization_->update(
+    lidar_points.stamp, result_pose, predict_state, registration_->getFitnessScore());
   covariance_ = optimization_->get_covariance();
 
   return true;
@@ -205,12 +212,13 @@ bool LidarInertialOdometry::scan_matching(
   const PointCloudPtr input_cloud_ptr, const Eigen::Matrix4d & initial_guess,
   Eigen::Matrix4d & result_pose)
 {
-  registration_->setInputSource(input_cloud_ptr);
-
   if (mapping_future_.valid()) {
-    if (mapping_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+    if (
+      mapping_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready &&
+      map_manager_->has_map_changed()) {
       local_map_ = mapping_future_.get();
       registration_->setInputTarget(local_map_);
+      map_manager_->reset();
     }
   }
 
@@ -219,6 +227,7 @@ bool LidarInertialOdometry::scan_matching(
     return false;
   }
 
+  registration_->setInputSource(input_cloud_ptr);
   PointCloudPtr align_cloud(new PointCloud);
   registration_->align(*align_cloud, initial_guess.cast<float>());
 

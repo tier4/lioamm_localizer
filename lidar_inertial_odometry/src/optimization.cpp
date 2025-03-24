@@ -37,11 +37,11 @@ void Optimization::set_initial_value(const double & timestamp, const Eigen::Matr
 
   gtsam::NonlinearFactorGraph graph;
   graph.add(gtsam::PriorFactor<gtsam::Pose3>(X(key_), prior_pose, pose_noise_model));
-  graph.add(gtsam::PriorFactor<gtsam::Vector3>(V(key_), prior_velocity, velocity_noise_model));
+  // graph.add(gtsam::PriorFactor<gtsam::Vector3>(V(key_), prior_velocity, velocity_noise_model));
 
   gtsam::FixedLagSmoother::KeyTimestampMap new_timestamp;
   new_timestamp[X(key_)] = timestamp;
-  new_timestamp[V(key_)] = timestamp;
+  // new_timestamp[V(key_)] = timestamp;
 
   smoother_ptr_->update(graph, initial_values);
   smoother_ptr_->update();
@@ -51,7 +51,7 @@ void Optimization::set_initial_value(const double & timestamp, const Eigen::Matr
 
 Eigen::Matrix4d Optimization::update(
   const double & timestamp, const Eigen::Matrix4d & lidar_pose_matrix,
-  const gtsam::NavState & predict_state)
+  const gtsam::NavState & predict_state, const double & fitness_score)
 {
   key_++;
   gtsam::NonlinearFactorGraph graph;
@@ -59,7 +59,7 @@ Eigen::Matrix4d Optimization::update(
   gtsam::Pose3 pose_to(lidar_pose_matrix);
 
   gtsam::noiseModel::Diagonal::shared_ptr odom_noise = gtsam::noiseModel::Diagonal::Variances(
-    (gtsam::Vector(6) << 1e-6, 1e-6, 1e-6, 1e-4, 1e-4, 1e-4).finished());
+    (gtsam::Vector(6) << 1e-5, 1e-5, 1e-5, 1e-3, 1e-3, 1e-3).finished());
 
   gtsam::Pose3 pose_from(lidar_odom_buffer_.back());
   gtsam::BetweenFactor<gtsam::Pose3> lidar_relative_factor(
@@ -68,15 +68,15 @@ Eigen::Matrix4d Optimization::update(
 
   gtsam::PriorFactor<gtsam::Vector3> predict_velocity(
     V(key_), predict_state.v(), gtsam::noiseModel::Isotropic::Precision(3, 1e3));
-  graph.add(predict_velocity);
+  // graph.add(predict_velocity);
 
   gtsam::Values initial_values;
   initial_values.insert(X(key_), pose_to);
-  initial_values.insert(V(key_), predict_state.v());
+  // initial_values.insert(V(key_), predict_state.v());
 
   gtsam::FixedLagSmoother::KeyTimestampMap new_timestamp;
   new_timestamp[X(key_)] = timestamp;
-  new_timestamp[V(key_)] = timestamp;
+  // new_timestamp[V(key_)] = timestamp;
 
   smoother_ptr_->update(graph, initial_values);
   smoother_ptr_->update();
@@ -85,8 +85,7 @@ Eigen::Matrix4d Optimization::update(
 
   covariance_ = smoother_ptr_->marginalCovariance(gtsam::Symbol('x', key_));
 
-  latest_state_ =
-    gtsam::NavState(result.at<gtsam::Pose3>(X(key_)), result.at<gtsam::Vector3>(V(key_)));
+  latest_state_ = gtsam::NavState(result.at<gtsam::Pose3>(X(key_)), gtsam::Vector3::Zero());
   lidar_odom_buffer_.push_back(latest_state_.pose());
 
   return latest_state_.pose().matrix().cast<double>();

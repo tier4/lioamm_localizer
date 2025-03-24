@@ -103,6 +103,10 @@ public:
 
   inline void insert_points(const sensor_type::Lidar & points) { lidar_buffer_.push_back(points); }
   inline void insert_imu(const sensor_type::Imu & imu) { imu_buffer_.push_back(imu); }
+  inline void insert_initial_pose(const sensor_type::Pose & initial_pose)
+  {
+    initial_pose_buffer_.push_back(initial_pose);
+  }
 
   bool sync_measurement(sensor_type::Measurement & measurement);
 
@@ -119,12 +123,15 @@ private:
   std::shared_ptr<MapManager> map_manager_;
   std::shared_ptr<ImuIntegration> imu_integration_;
   std::shared_ptr<Optimization> optimization_;
+
+  std::mutex registration_mutex_;
   std::shared_ptr<fast_gicp::FastVGICP<PointType, PointType>> registration_;
 
   LioConfig config_;
 
   ConcurrentQueue<sensor_type::Lidar> lidar_buffer_;
   ConcurrentQueue<sensor_type::Imu> imu_buffer_;
+  ConcurrentQueue<sensor_type::Pose> initial_pose_buffer_;
 
   pcl::VoxelGrid<PointType> scan_voxel_grid_;
   pcl::CropBox<PointType> crop_;
