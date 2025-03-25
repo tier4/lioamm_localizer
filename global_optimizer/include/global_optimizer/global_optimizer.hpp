@@ -15,9 +15,9 @@
 #ifndef MAP_MATCHER__MAP_MATCHER_HPP_
 #define MAP_MATCHER__MAP_MATCHER_HPP_
 
+#include "global_optimizer/imu_integration.hpp"
 #include "lioamm_localizer_common/lioamm_localizer_utils.hpp"
 #include "lioamm_localizer_common/point_type.hpp"
-#include "map_matcher/imu_integration.hpp"
 
 #include <Eigen/Core>
 #include <pcl_ros/transforms.hpp>
@@ -43,14 +43,14 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
-namespace map_matcher
+namespace global_optimizer
 {
 
-class MapMatcher : public rclcpp::Node
+class GlobalOptimizer : public rclcpp::Node
 {
 public:
-  explicit MapMatcher(const rclcpp::NodeOptions & options);
-  ~MapMatcher();
+  explicit GlobalOptimizer(const rclcpp::NodeOptions & options);
+  ~GlobalOptimizer();
 
 private:
   void callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
@@ -105,6 +105,6 @@ private:
   double last_imu_time_stamp_;
 };
 
-}  // namespace map_matcher
+}  // namespace global_optimizer
 
 #endif

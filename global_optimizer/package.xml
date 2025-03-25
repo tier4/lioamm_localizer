@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>map_matcher</name>
+  <name>global_optimizer</name>
   <version>0.0.0</version>
-  <description>The map_matcher package</description>
+  <description>The global_optimizer package</description>
 
   <maintainer email="ryu.yamamoto@tier4.jp">RyuYamamoto</maintainer>
 

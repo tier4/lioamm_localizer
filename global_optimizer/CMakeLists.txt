@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(map_matcher)
+project(global_optimizer)
 
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
@@ -22,7 +22,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "map_matcher::MapMatcher"
+  PLUGIN "global_optimizer::GlobalOptimizer"
   EXECUTABLE ${PROJECT_NAME}_node
 )
 

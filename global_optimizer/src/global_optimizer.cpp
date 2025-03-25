@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "map_matcher/map_matcher.hpp"
+#include "global_optimizer/global_optimizer.hpp"
 
-namespace map_matcher
+namespace global_optimizer
 {
 
-MapMatcher::MapMatcher(const rclcpp::NodeOptions & options)
-: Node("map_matcher", options), transformation_(Eigen::Matrix4f::Identity())
+GlobalOptimizer::GlobalOptimizer(const rclcpp::NodeOptions & options)
+: Node("global_optimizer", options), transformation_(Eigen::Matrix4f::Identity())
 {
   base_frame_id_ = this->declare_parameter<std::string>("base_frame_id");
   map_frame_id_ = this->declare_parameter<std::string>("map_frame_id");
@@ -71,27 +71,27 @@ MapMatcher::MapMatcher(const rclcpp::NodeOptions & options)
 
   points_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "points_raw", rclcpp::SensorDataQoS().keep_last(10),
-    std::bind(&MapMatcher::callback_points, this, std::placeholders::_1));
+    std::bind(&GlobalOptimizer::callback_points, this, std::placeholders::_1));
   imu_subscriber_ = this->create_subscription<sensor_msgs::msg::Imu>(
-    "imu_raw", 10, std::bind(&MapMatcher::callback_imu, this, std::placeholders::_1));
+    "imu_raw", 10, std::bind(&GlobalOptimizer::callback_imu, this, std::placeholders::_1));
   map_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "map", rclcpp::QoS{1}.transient_local(),
-    std::bind(&MapMatcher::callback_map, this, std::placeholders::_1));
+    std::bind(&GlobalOptimizer::callback_map, this, std::placeholders::_1));
   odom_subscriber_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-    "lidar_odometry", 10, std::bind(&MapMatcher::callback_odom, this, std::placeholders::_1));
+    "lidar_odometry", 10, std::bind(&GlobalOptimizer::callback_odom, this, std::placeholders::_1));
   initial_pose_subscriber_ =
     this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
       "initialpose_3d", 5,
-      std::bind(&MapMatcher::callback_initial_pose, this, std::placeholders::_1));
+      std::bind(&GlobalOptimizer::callback_initial_pose, this, std::placeholders::_1));
 
   pose_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("map_pose", 10);
 }
 
-MapMatcher::~MapMatcher()
+GlobalOptimizer::~GlobalOptimizer()
 {
 }
 
-bool MapMatcher::integrate_imu(const std_msgs::msg::Header::_stamp_type & sensor_time_stamp)
+bool GlobalOptimizer::integrate_imu(const std_msgs::msg::Header::_stamp_type & sensor_time_stamp)
 {
   if (imu_queue_.empty()) return false;
 
@@ -118,7 +118,7 @@ bool MapMatcher::integrate_imu(const std_msgs::msg::Header::_stamp_type & sensor
   return true;
 }
 
-void MapMatcher::callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
+void GlobalOptimizer::callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
 {
   if (ndt_->getInputTarget() == nullptr) {
     RCLCPP_WARN_STREAM(this->get_logger(), "Target map is not loaded.");
@@ -183,7 +183,7 @@ void MapMatcher::callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr 
   publish_tf(estimated_pose_msg.pose, current_time_stamp, map_frame_id_, base_frame_id_);
 }
 
-void MapMatcher::callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg)
+void GlobalOptimizer::callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
   geometry_msgs::msg::TransformStamped base_to_imu;
   if (!get_transform(base_frame_id_, msg->header.frame_id, base_to_imu)) {
@@ -212,7 +212,7 @@ void MapMatcher::callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg)
   }
 }
 
-void MapMatcher::callback_map(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
+void GlobalOptimizer::callback_map(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
 {
   if (map_ == nullptr) {
     map_.reset(new PointCloud);
@@ -227,14 +227,14 @@ void MapMatcher::callback_map(const sensor_msgs::msg::PointCloud2::SharedPtr msg
   ndt_->setInputTarget(map_raw);
 }
 
-void MapMatcher::callback_odom(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+void GlobalOptimizer::callback_odom(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
 {
   if (map_matching_fail_) {
     transformation_ = lioamm_localizer_utils::convert_pose_to_matrix(msg->pose);
   }
 }
 
-void MapMatcher::callback_initial_pose(
+void GlobalOptimizer::callback_initial_pose(
   const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
 {
   RCLCPP_INFO_STREAM(this->get_logger(), "Initial pose callback.");
@@ -243,7 +243,7 @@ void MapMatcher::callback_initial_pose(
   imu_integration_->initialize(transformation_.cast<double>(), Eigen::VectorXd::Zero(6));
 }
 
-void MapMatcher::preprocessing(
+void GlobalOptimizer::preprocessing(
   const PointCloudPtr & input_cloud_ptr, const PointCloudPtr & output_cloud_ptr)
 {
   PointCloudPtr downsampling_cloud(new PointCloud);
@@ -255,7 +255,7 @@ void MapMatcher::preprocessing(
   crop_.filter(*output_cloud_ptr);
 }
 
-void MapMatcher::publish_tf(
+void GlobalOptimizer::publish_tf(
   const geometry_msgs::msg::Pose pose, const rclcpp::Time stamp, const std::string frame_id,
   const std::string child_frame_id)
 {
@@ -271,7 +271,7 @@ void MapMatcher::publish_tf(
   broadcaster_->sendTransform(transform_stamped);
 }
 
-bool MapMatcher::get_transform(
+bool GlobalOptimizer::get_transform(
   const std::string & target_frame, const std::string & source_frame,
   geometry_msgs::msg::TransformStamped & transformation)
 {
@@ -284,7 +284,7 @@ bool MapMatcher::get_transform(
   return true;
 }
 
-}  // namespace map_matcher
+}  // namespace global_optimizer
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(map_matcher::MapMatcher)
+RCLCPP_COMPONENTS_REGISTER_NODE(global_optimizer::GlobalOptimizer)
