@@ -4,7 +4,8 @@
   <set_parameter name="use_sim_time" value="true"/>
   <node pkg="global_optimizer" exec="global_optimizer_node" name="global_optimizer" output="screen">
     <!-- <remap from="points_raw" to="/os1_cloud_node/points"/> -->
-    <remap from="points_raw" to="/sensing/lidar/left_upper/pointcloud_raw"/>
+    <!-- <remap from="points_raw" to="/sensing/lidar/left_upper/pointcloud_raw"/> -->
+    <remap from="points_raw" to="/deskew_scan"/>
     <!-- <remap from="imu_raw" to="/os1_cloud_node/imu"/> -->
     <remap from="imu_raw" to="/sensing/imu/tamagawa/imu_raw"/>
     <param from="$(var global_optimizer_config_path)"/>

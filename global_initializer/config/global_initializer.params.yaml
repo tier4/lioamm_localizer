@@ -3,8 +3,8 @@ global_initializer:
     map_downsample_leaf_size: 0.2
     sensor_downsample_leaf_size: 3.0
     base_frame_id: base_link
-    num_particles: 100
-    pos_noise_std: 1.0
+    num_particles: 200
+    pos_noise_std: 2.0
     yaw_noise_std: 0.2
     transformation_epsilon: 0.01
     step_size: 0.1

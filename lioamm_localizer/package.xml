@@ -11,7 +11,9 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>lioamm_localizer_common</depend>
-  <depend>map_matcher</depend>
+  <depend>global_optimizer</depend>
+  <depend>lidar_inertial_odometry</depend>
+  <depend>lioamm_localizer_msgs</depend>
   <depend>map_loader</depend>
   <depend>global_initializer</depend>
 

@@ -19,6 +19,7 @@ include_directories(include ${PCL_INCLUDE_DIRS} ${GTSAM_INCLUDE_DIR})
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/${PROJECT_NAME}
+  src/optimization.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}

@@ -15,19 +15,23 @@
 #ifndef MAP_MATCHER__MAP_MATCHER_HPP_
 #define MAP_MATCHER__MAP_MATCHER_HPP_
 
-#include "global_optimizer/imu_integration.hpp"
+#include "global_optimizer/optimization.hpp"
+#include "lioamm_localizer_common/concurrent_queue.hpp"
 #include "lioamm_localizer_common/lioamm_localizer_utils.hpp"
 #include "lioamm_localizer_common/point_type.hpp"
+#include "lioamm_localizer_common/sensor_type.hpp"
 
 #include <Eigen/Core>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include "lioamm_localizer_msgs/msg/key_frame.hpp"
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
+#include <nav_msgs/msg/path.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -53,13 +57,9 @@ public:
   ~GlobalOptimizer();
 
 private:
-  void callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
-  void callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg);
   void callback_map(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
-  void callback_odom(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
   void callback_initial_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
-
-  bool integrate_imu(const std_msgs::msg::Header::_stamp_type & sensor_header);
+  void callback_keyframe(const lioamm_localizer_msgs::msg::KeyFrame::SharedPtr msg);
 
   void preprocessing(const PointCloudPtr & input_cloud_ptr, const PointCloudPtr & output_cloud_ptr);
 
@@ -70,19 +70,19 @@ private:
     const geometry_msgs::msg::Pose pose, const rclcpp::Time stamp, const std::string frame_id,
     const std::string child_frame_id);
 
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr points_subscriber_;
-  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscriber_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr map_subscriber_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr odom_subscriber_;
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
     initial_pose_subscriber_;
+  rclcpp::Subscription<lioamm_localizer_msgs::msg::KeyFrame>::SharedPtr keyframe_subscriber_;
+
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr scan_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr scan_matching_pose_publisher_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr global_pose_path_publisher_;
 
   tf2_ros::Buffer tf_buffer_{get_clock()};
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
   std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
-
-  std::shared_ptr<map_matcher::ImuIntegration> imu_integration_;
 
   pcl::VoxelGrid<PointType> voxel_grid_scan_;
   pcl::VoxelGrid<PointType> voxel_grid_map_;
@@ -97,12 +97,17 @@ private:
 
   std::shared_ptr<pclomp::NormalDistributionsTransform<PointType, PointType>> ndt_;
 
+  std::shared_ptr<Optimization> optimizer_;
+
+  nav_msgs::msg::Path global_pose_path_;
+
   bool is_initialized_{false};
   bool map_matching_fail_{false};
 
-  std::deque<sensor_type::Imu> imu_queue_;
+  int matching_fail_num_threshold_;
+  double matching_score_threshold_;
 
-  double last_imu_time_stamp_;
+  int fail_num_{0};
 };
 
 }  // namespace global_optimizer

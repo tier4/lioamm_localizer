@@ -19,7 +19,7 @@
     min_distance: 0.001
 
     # Scan Registration
-    max_correspondence_distance: 0.5
+    max_correspondence_distance: 2.0
     correspondence_randomness: 20
     max_iteration: 64
     omp_num_thread: 4
@@ -36,11 +36,11 @@
     gravity: 9.80665
 
     # Local Map
-    translation_threshold: 5.0
+    translation_threshold: 1.0
     rotation_threshold: 45.0
     voxel_map_resolution: 0.25
     map_removal_distance: 100.0
-    max_submap_size: 10
+    max_submap_size: 20
 
     # IMU
     imu_calibration_time: 1.0

@@ -50,7 +50,7 @@ LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig co
   gtsam::ISAM2Params smoother_parameters;
   smoother_parameters.relinearizeThreshold = 0.01;
   smoother_parameters.relinearizeSkip = 1;
-  smoother_parameters.factorization = gtsam::ISAM2Params::Factorization::CHOLESKY;
+  smoother_parameters.factorization = gtsam::ISAM2Params::Factorization::QR;
   optimization_ = std::make_shared<Optimization>(smoother_parameters);
 
   // IMU Integration
@@ -99,6 +99,23 @@ bool LidarInertialOdometry::sync_measurement(sensor_type::Measurement & measurem
     measurement.imu_queue.push_back(imu_buffer_.front());
   }
 
+  if (!map_pose_queue_.empty()) {
+    std::size_t closest_idx = 0;
+    double min_diff = std::numeric_limits<double>::max();
+
+    for (std::size_t idx = 0; idx < map_pose_queue_.size(); ++idx) {
+      double diff = std::fabs(map_pose_queue_[idx].stamp - measurement.lidar_points.stamp);
+      if (diff < min_diff) {
+        min_diff = diff;
+        closest_idx = idx;
+      }
+    }
+
+    measurement.map_pose_queue.push_back(map_pose_queue_[closest_idx]);
+
+    map_pose_queue_.clear();
+  }
+
   return true;
 }
 
@@ -137,7 +154,7 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
   imu_integration_->initialize(measurement.lidar_points.stamp, transformation_, imu_bias_);
 
   // Factor Graph Optimization
-  optimization_->set_initial_value(measurement.lidar_points.stamp, transformation_);
+  optimization_->set_initial_value(transformation_, imu_bias_, measurement.lidar_points.stamp);
 
   // Update Initial Local Map
   update_local_map(transformation_, measurement.lidar_points, true);
@@ -149,8 +166,10 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
 gtsam::NavState LidarInertialOdometry::predict(
   const double stamp, std::deque<sensor_type::Imu> imu_queue)
 {
-  imu_integration_->integrate(stamp, imu_queue);
-  const auto [predict_state, predict_bias] = imu_integration_->predict(transformation_);
+  imu_integration_->integrate(stamp, imu_queue, optimization_->get_bias());
+  // const auto [predict_state, predict_bias] = imu_integration_->predict(transformation_);
+  const auto predict_state =
+    imu_integration_->predict(optimization_->get_state(), optimization_->get_bias());
 
   return predict_state;
 }
@@ -182,8 +201,9 @@ bool LidarInertialOdometry::update(
     result_pose = predict_state.pose().matrix();
   }
 
-  transformation_ = optimization_->update(lidar_points.stamp, result_pose, predict_state);
-  covariance_ = optimization_->get_covariance();
+  transformation_ = optimization_->update(
+    lidar_points.stamp, result_pose, imu_integration_->get_integrated_measurements());
+  // covariance_ = optimization_->get_covariance();
 
   return true;
 }
@@ -268,5 +288,19 @@ PointCloudPtr LidarInertialOdometry::preprocessing(const PointCloudPtr & cloud_i
   crop_.setInputCloud(downsampling_cloud);
   crop_.filter(*crop_cloud);
 
-  return crop_cloud;
+  std::vector<int> indices;
+  pcl::removeNaNFromPointCloud(*crop_cloud, *crop_cloud, indices);
+
+  PointCloudPtr filtered_inf_cloud(new PointCloud);
+
+  for (const auto & point : crop_cloud->points) {
+    if (std::isfinite(point.x) && std::isfinite(point.y) && std::isfinite(point.z)) {
+      filtered_inf_cloud->points.push_back(point);
+    }
+  }
+  filtered_inf_cloud->width = filtered_inf_cloud->points.size();
+  filtered_inf_cloud->height = 1;
+  filtered_inf_cloud->is_dense = true;
+
+  return filtered_inf_cloud;
 }
