@@ -69,6 +69,13 @@ public:
     return local_map_;
   }
 
+  inline void clear_map()
+  {
+    std::unique_lock<std::shared_mutex> lock(map_mutex_);
+    local_map_->clear();
+    submaps_.clear();
+  }
+
   VoxelKey get_voxel_index(const Eigen::Vector3f & point)
   {
     Eigen::Vector3i voxel_index = (point / resolution_).array().floor().cast<int>();

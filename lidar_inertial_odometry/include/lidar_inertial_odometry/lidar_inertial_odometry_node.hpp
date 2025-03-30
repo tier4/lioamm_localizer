@@ -14,12 +14,14 @@
 
 #ifndef LIDAR_INERTIAL_ODOMETRY__LIDAR_INERTIAL_ODOMETRY_NODE_HPP_
 #define LIDAR_INERTIAL_ODOMETRY__LIDAR_INERTIAL_ODOMETRY_NODE_HPP_
+
 #include "lidar_inertial_odometry/imu_initializer.hpp"
 #include "lidar_inertial_odometry/lidar_inertial_odometry.hpp"
 
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include "lioamm_localizer_msgs/msg/key_frame.hpp"
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -51,6 +53,8 @@ public:
 
   void callback_points(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg);
+  void callback_initial_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+  void callback_map_pose(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
 
   void publish_local_map(const double stamp);
   void publish_message(
@@ -82,12 +86,17 @@ public:
 private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr points_subscriber_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscriber_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
+    initial_pose_subscriber_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr map_pose_subscriber_;
+
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_stamped_publisher_;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
     pose_with_covariance_stamped_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr local_map_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr deskew_scan_publisher_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr odometry_path_publisher_;
+  rclcpp::Publisher<lioamm_localizer_msgs::msg::KeyFrame>::SharedPtr keyframe_publisher_;
 
   rclcpp::TimerBase::SharedPtr timer_;
 

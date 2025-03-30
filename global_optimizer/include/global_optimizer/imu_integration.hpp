@@ -15,7 +15,7 @@
 #ifndef MAP_MATCHER__IMU_INTEGRATION_HPP_
 #define MAP_MATCHER__IMU_INTEGRATION_HPP_
 
-#include "map_matcher/sensor_type.hpp"
+#include "global_optimizer/sensor_type.hpp"
 
 #include <Eigen/Core>
 

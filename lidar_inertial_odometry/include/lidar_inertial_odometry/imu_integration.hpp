@@ -88,6 +88,39 @@ public:
   }
   ~ImuIntegration() = default;
 
+  void integrate(
+    const double stamp, std::deque<sensor_type::Imu> imu_queue,
+    const gtsam::imuBias::ConstantBias & bias)
+  {
+    imu_integrated_ptr_->resetIntegrationAndSetBias(bias);
+
+    Eigen::Vector3d linear_acceleration = Eigen::Vector3d::Zero();
+    Eigen::Vector3d angular_velocity = Eigen::Vector3d::Zero();
+
+    for (const auto & imu : imu_queue) {
+      const double dt = imu.stamp - last_imu_time_stamp_;
+      if (dt <= 0.0) {
+        continue;
+      }
+      linear_acceleration = imu.linear_acceleration;
+      angular_velocity = imu.angular_velocity;
+      imu_integrated_ptr_->integrateMeasurement(linear_acceleration, angular_velocity, dt);
+      imu_queue.pop_front();
+
+      last_imu_time_stamp_ = imu.stamp;
+    }
+
+    const double dt = stamp - last_imu_time_stamp_;
+    if (0.0 < dt) {
+      if (!imu_queue.empty()) {
+        auto imu = imu_queue.front();
+        linear_acceleration = imu.linear_acceleration;
+        angular_velocity = imu.angular_velocity;
+      }
+      imu_integrated_ptr_->integrateMeasurement(linear_acceleration, angular_velocity, dt);
+    }
+  }
+
   void integrate(const double stamp, std::deque<sensor_type::Imu> imu_queue)
   {
     Eigen::Vector3d linear_acceleration = Eigen::Vector3d::Zero();
@@ -144,6 +177,11 @@ public:
   }
 
   void initialize(const double imu_time_stamp) { last_imu_time_stamp_ = imu_time_stamp; }
+
+  gtsam::NavState predict(const gtsam::NavState & state, const gtsam::imuBias::ConstantBias & bias)
+  {
+    return imu_integrated_ptr_->predict(state, bias);
+  }
 
   std::tuple<gtsam::NavState, gtsam::imuBias::ConstantBias> predict(
     const Eigen::Matrix4d & odometry)
@@ -218,11 +256,6 @@ public:
     key_++;
 
     return std::make_tuple(previous_state_, previous_bias_);
-  }
-
-  gtsam::NavState predict(const gtsam::NavState & state, const gtsam::imuBias::ConstantBias & bias)
-  {
-    return imu_integrated_ptr_->predict(state, bias);
   }
 
   void insert_imu(const sensor_type::Imu & imu) { imu_queue_.push_back(imu); }

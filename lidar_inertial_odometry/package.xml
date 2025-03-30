@@ -24,10 +24,11 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>fast_gicp</depend>
   <depend>ndt_omp</depend>
-  <depend>lioamm_localizer_common</depend>
   <depend>sophus</depend>
   <depend>gtsam</depend>
   <depend>gtsam_unstable</depend>
+  <depend>lioamm_localizer_common</depend>
+  <depend>lioamm_localizer_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

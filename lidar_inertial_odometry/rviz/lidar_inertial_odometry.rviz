@@ -3,10 +3,9 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /TF1/Frames1
+      Expanded: ~
       Splitter Ratio: 0.5
-    Tree Height: 1079
+    Tree Height: 363
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -28,444 +27,460 @@ Panels:
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.5
-      Cell Size: 1
-      Class: rviz_default_plugins/Grid
-      Color: 160; 160; 164
-      Enabled: false
-      Line Style:
-        Line Width: 0.029999999329447746
-        Value: Lines
-      Name: Grid
-      Normal Cell Count: 0
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Plane: XY
-      Plane Cell Count: 10
-      Reference Frame: <Fixed Frame>
-      Value: false
-    - Class: rviz_default_plugins/TF
-      Enabled: true
-      Frame Timeout: 15
-      Frames:
-        All Enabled: false
-        ars408_front_link:
-          Value: true
-        base_link:
-          Value: true
-        camera0/camera_link:
-          Value: true
-        camera0/camera_optical_link:
-          Value: true
-        camera1/camera_link:
-          Value: true
-        camera1/camera_optical_link:
-          Value: true
-        camera2/camera_link:
-          Value: true
-        camera2/camera_optical_link:
-          Value: true
-        camera3/camera_link:
-          Value: true
-        camera3/camera_optical_link:
-          Value: true
-        camera4/camera_link:
-          Value: true
-        camera4/camera_optical_link:
-          Value: true
-        camera5/camera_link:
-          Value: true
-        camera5/camera_optical_link:
-          Value: true
-        camera6/camera_link:
-          Value: true
-        camera6/camera_optical_link:
-          Value: true
-        camera7/camera_link:
-          Value: true
-        camera7/camera_optical_link:
-          Value: true
-        front_center/radar_link:
-          Value: true
-        front_left/radar_link:
-          Value: true
-        front_right/radar_link:
-          Value: true
-        front_unit_base_link:
-          Value: true
-        gnss_left_link:
-          Value: true
-        gnss_link:
-          Value: true
-        gnss_right_link:
-          Value: true
-        map:
-          Value: true
-        pandar_40p_front:
-          Value: true
-        pandar_40p_front_base_link:
-          Value: true
-        pandar_40p_left:
-          Value: true
-        pandar_40p_left_base_link:
-          Value: true
-        pandar_40p_rear:
-          Value: true
-        pandar_40p_rear_base_link:
-          Value: true
-        pandar_40p_right:
-          Value: true
-        pandar_40p_right_base_link:
-          Value: true
-        pandar_qt_front:
-          Value: true
-        pandar_qt_front_base_link:
-          Value: true
-        pandar_qt_left:
-          Value: true
-        pandar_qt_left_base_link:
-          Value: true
-        pandar_qt_rear:
-          Value: true
-        pandar_qt_rear_base_link:
-          Value: true
-        pandar_qt_right:
-          Value: true
-        pandar_qt_right_base_link:
-          Value: true
-        rear_center/radar_link:
-          Value: true
-        rear_left/radar_link:
-          Value: true
-        rear_right/radar_link:
-          Value: true
-        rear_unit_base_link:
-          Value: true
-        tamagawa/imu_link:
-          Value: true
-        top_unit_base_link:
-          Value: true
-        traffic_light_camera/camera_link:
-          Value: true
-        traffic_light_camera/camera_optical_link:
-          Value: true
-        viewer:
-          Value: true
-      Marker Scale: 1
-      Name: TF
-      Show Arrows: true
-      Show Axes: true
-      Show Names: true
-      Tree:
-        map:
-          base_link:
+    - Class: rviz_common/Group
+      Displays:
+        - Alpha: 0.5
+          Cell Size: 1
+          Class: rviz_default_plugins/Grid
+          Color: 160; 160; 164
+          Enabled: false
+          Line Style:
+            Line Width: 0.029999999329447746
+            Value: Lines
+          Name: Grid
+          Normal Cell Count: 0
+          Offset:
+            X: 0
+            Y: 0
+            Z: 0
+          Plane: XY
+          Plane Cell Count: 10
+          Reference Frame: <Fixed Frame>
+          Value: false
+        - Class: rviz_default_plugins/TF
+          Enabled: true
+          Frame Timeout: 15
+          Frames:
+            All Enabled: false
             ars408_front_link:
-              {}
+              Value: true
+            base_link:
+              Value: true
+            camera0/camera_link:
+              Value: true
+            camera0/camera_optical_link:
+              Value: true
+            camera1/camera_link:
+              Value: true
+            camera1/camera_optical_link:
+              Value: true
+            camera2/camera_link:
+              Value: true
+            camera2/camera_optical_link:
+              Value: true
+            camera3/camera_link:
+              Value: true
+            camera3/camera_optical_link:
+              Value: true
+            camera4/camera_link:
+              Value: true
+            camera4/camera_optical_link:
+              Value: true
+            camera5/camera_link:
+              Value: true
+            camera5/camera_optical_link:
+              Value: true
+            camera6/camera_link:
+              Value: true
+            camera6/camera_optical_link:
+              Value: true
+            camera7/camera_link:
+              Value: true
+            camera7/camera_optical_link:
+              Value: true
+            front_center/radar_link:
+              Value: true
+            front_left/radar_link:
+              Value: true
+            front_right/radar_link:
+              Value: true
             front_unit_base_link:
-              camera6/camera_link:
-                camera6/camera_optical_link:
-                  {}
-              front_center/radar_link:
-                {}
-              front_left/radar_link:
-                {}
-              front_right/radar_link:
-                {}
-              pandar_40p_front_base_link:
-                pandar_40p_front:
-                  {}
-              pandar_qt_front_base_link:
-                pandar_qt_front:
-                  {}
+              Value: true
+            gnss_left_link:
+              Value: true
             gnss_link:
-              {}
+              Value: true
+            gnss_right_link:
+              Value: true
+            map:
+              Value: true
+            pandar_40p_front:
+              Value: true
+            pandar_40p_front_base_link:
+              Value: true
+            pandar_40p_left:
+              Value: true
+            pandar_40p_left_base_link:
+              Value: true
+            pandar_40p_rear:
+              Value: true
+            pandar_40p_rear_base_link:
+              Value: true
+            pandar_40p_right:
+              Value: true
+            pandar_40p_right_base_link:
+              Value: true
+            pandar_qt_front:
+              Value: true
+            pandar_qt_front_base_link:
+              Value: true
+            pandar_qt_left:
+              Value: true
+            pandar_qt_left_base_link:
+              Value: true
+            pandar_qt_rear:
+              Value: true
+            pandar_qt_rear_base_link:
+              Value: true
+            pandar_qt_right:
+              Value: true
+            pandar_qt_right_base_link:
+              Value: true
+            rear_center/radar_link:
+              Value: true
+            rear_left/radar_link:
+              Value: true
+            rear_right/radar_link:
+              Value: true
             rear_unit_base_link:
-              camera3/camera_link:
-                camera3/camera_optical_link:
-                  {}
-              pandar_40p_rear_base_link:
-                pandar_40p_rear:
-                  {}
-              pandar_qt_rear_base_link:
-                pandar_qt_rear:
-                  {}
-              rear_center/radar_link:
-                {}
-              rear_left/radar_link:
-                {}
-              rear_right/radar_link:
-                {}
+              Value: true
+            tamagawa/imu_link:
+              Value: true
             top_unit_base_link:
-              camera0/camera_link:
-                camera0/camera_optical_link:
+              Value: true
+            traffic_light_camera/camera_link:
+              Value: true
+            traffic_light_camera/camera_optical_link:
+              Value: true
+            viewer:
+              Value: true
+          Marker Scale: 1
+          Name: TF
+          Show Arrows: true
+          Show Axes: true
+          Show Names: true
+          Tree:
+            map:
+              base_link:
+                ars408_front_link:
                   {}
-              camera1/camera_link:
-                camera1/camera_optical_link:
+                front_unit_base_link:
+                  camera6/camera_link:
+                    camera6/camera_optical_link:
+                      {}
+                  front_center/radar_link:
+                    {}
+                  front_left/radar_link:
+                    {}
+                  front_right/radar_link:
+                    {}
+                  pandar_40p_front_base_link:
+                    pandar_40p_front:
+                      {}
+                  pandar_qt_front_base_link:
+                    pandar_qt_front:
+                      {}
+                gnss_link:
                   {}
-              camera2/camera_link:
-                camera2/camera_optical_link:
-                  {}
-              camera4/camera_link:
-                camera4/camera_optical_link:
-                  {}
-              camera5/camera_link:
-                camera5/camera_optical_link:
-                  {}
-              camera7/camera_link:
-                camera7/camera_optical_link:
-                  {}
-              gnss_left_link:
+                rear_unit_base_link:
+                  camera3/camera_link:
+                    camera3/camera_optical_link:
+                      {}
+                  pandar_40p_rear_base_link:
+                    pandar_40p_rear:
+                      {}
+                  pandar_qt_rear_base_link:
+                    pandar_qt_rear:
+                      {}
+                  rear_center/radar_link:
+                    {}
+                  rear_left/radar_link:
+                    {}
+                  rear_right/radar_link:
+                    {}
+                top_unit_base_link:
+                  camera0/camera_link:
+                    camera0/camera_optical_link:
+                      {}
+                  camera1/camera_link:
+                    camera1/camera_optical_link:
+                      {}
+                  camera2/camera_link:
+                    camera2/camera_optical_link:
+                      {}
+                  camera4/camera_link:
+                    camera4/camera_optical_link:
+                      {}
+                  camera5/camera_link:
+                    camera5/camera_optical_link:
+                      {}
+                  camera7/camera_link:
+                    camera7/camera_optical_link:
+                      {}
+                  gnss_left_link:
+                    {}
+                  gnss_right_link:
+                    {}
+                  pandar_40p_left_base_link:
+                    pandar_40p_left:
+                      {}
+                  pandar_40p_right_base_link:
+                    pandar_40p_right:
+                      {}
+                  pandar_qt_left_base_link:
+                    pandar_qt_left:
+                      {}
+                  pandar_qt_right_base_link:
+                    pandar_qt_right:
+                      {}
+                  tamagawa/imu_link:
+                    {}
+                  traffic_light_camera/camera_link:
+                    traffic_light_camera/camera_optical_link:
+                      {}
+              viewer:
                 {}
-              gnss_right_link:
-                {}
-              pandar_40p_left_base_link:
-                pandar_40p_left:
-                  {}
-              pandar_40p_right_base_link:
-                pandar_40p_right:
-                  {}
-              pandar_qt_left_base_link:
-                pandar_qt_left:
-                  {}
-              pandar_qt_right_base_link:
-                pandar_qt_right:
-                  {}
-              tamagawa/imu_link:
-                {}
-              traffic_light_camera/camera_link:
-                traffic_light_camera/camera_optical_link:
-                  {}
-          viewer:
-            {}
-      Update Interval: 0
-      Value: true
-    - Alpha: 1
-      Class: rviz_default_plugins/RobotModel
-      Collision Enabled: false
-      Description File: ""
-      Description Source: Topic
-      Description Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /robot_description
-      Enabled: true
-      Links:
-        All Links Enabled: true
-        Expand Joint Details: false
-        Expand Link Details: false
-        Expand Tree: false
-        Link Tree Style: Links in Alphabetic Order
-      Mass Properties:
-        Inertia: false
-        Mass: false
-      Name: RobotModel
-      TF Prefix: ""
-      Update Interval: 0
-      Value: true
-      Visual Enabled: true
-    - Alpha: 0.10000000149011612
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz_default_plugins/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: Intensity
-      Decay Time: 9999
-      Enabled: true
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 255
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: dense map
-      Position Transformer: XYZ
-      Selectable: false
-      Size (Pixels): 1
-      Size (m): 0.05000000074505806
-      Style: Points
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Best Effort
-        Value: /deskew_scan
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: true
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 23.711013793945312
-        Min Value: -1.6515573263168335
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz_default_plugins/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: Intensity
-      Decay Time: 0
-      Enabled: false
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 255
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: deskew scan
-      Position Transformer: XYZ
-      Selectable: false
-      Size (Pixels): 1
-      Size (m): 0.05000000074505806
-      Style: Points
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Best Effort
-        Value: /deskew_scan
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz_default_plugins/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: Intensity
-      Decay Time: 0
-      Enabled: true
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 255
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: local map
-      Position Transformer: XYZ
-      Selectable: true
-      Size (Pixels): 1
-      Size (m): 0.009999999776482582
-      Style: Points
-      Topic:
-        Depth: 5
-        Durability Policy: Transient Local
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /local_map
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: true
-    - Class: rviz_default_plugins/Image
-      Enabled: false
-      Max Value: 1
-      Median window: 5
-      Min Value: 0
-      Name: Image
-      Normalize Range: true
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /camera/infra2/image_rect_raw
-      Value: false
-    - Alpha: 1
-      Buffer Length: 1
-      Class: rviz_default_plugins/Path
-      Color: 25; 255; 0
-      Enabled: true
-      Head Diameter: 0.30000001192092896
-      Head Length: 0.20000000298023224
-      Length: 0.30000001192092896
-      Line Style: Billboards
-      Line Width: 0.10000000149011612
-      Name: odometry path
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Pose Color: 255; 85; 255
-      Pose Style: None
-      Radius: 0.029999999329447746
-      Shaft Diameter: 0.10000000149011612
-      Shaft Length: 0.10000000149011612
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /odometry_path
-      Value: true
-    - Alpha: 1
-      Axes Length: 0.5
-      Axes Radius: 0.05000000074505806
-      Class: rviz_default_plugins/Pose
-      Color: 255; 25; 0
-      Enabled: true
-      Head Length: 0.30000001192092896
-      Head Radius: 0.10000000149011612
-      Name: lidar odometry
-      Shaft Length: 1
-      Shaft Radius: 0.05000000074505806
-      Shape: Axes
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /pose_stamped
-      Value: true
-    - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.10000000149011612
-      Class: rviz_default_plugins/PoseWithCovariance
-      Color: 255; 25; 0
-      Covariance:
-        Orientation:
-          Alpha: 0.5
-          Color: 255; 255; 127
-          Color Style: Unique
-          Frame: Local
-          Offset: 1
-          Scale: 1
+          Update Interval: 0
           Value: true
-        Position:
-          Alpha: 0.30000001192092896
-          Color: 204; 51; 204
-          Scale: 1
+        - Alpha: 1
+          Class: rviz_default_plugins/RobotModel
+          Collision Enabled: false
+          Description File: ""
+          Description Source: Topic
+          Description Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /robot_description
+          Enabled: true
+          Links:
+            All Links Enabled: true
+            Expand Joint Details: false
+            Expand Link Details: false
+            Expand Tree: false
+            Link Tree Style: Links in Alphabetic Order
+          Mass Properties:
+            Inertia: false
+            Mass: false
+          Name: RobotModel
+          TF Prefix: ""
+          Update Interval: 0
           Value: true
-        Value: true
+          Visual Enabled: true
       Enabled: true
-      Head Length: 0.30000001192092896
-      Head Radius: 0.10000000149011612
-      Name: lidar odometry with covariance
-      Shaft Length: 1
-      Shaft Radius: 0.05000000074505806
-      Shape: Arrow
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /pose_with_covariance_stamped
-      Value: true
+      Name: System
+    - Class: rviz_common/Group
+      Displays:
+        - Alpha: 0.10000000149011612
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz_default_plugins/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: Intensity
+          Decay Time: 9999
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 255
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: dense map
+          Position Transformer: XYZ
+          Selectable: false
+          Size (Pixels): 1
+          Size (m): 0.05000000074505806
+          Style: Points
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Best Effort
+            Value: /deskew_scan
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz_default_plugins/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: Intensity
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 255
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: local map
+          Position Transformer: XYZ
+          Selectable: true
+          Size (Pixels): 1
+          Size (m): 0.009999999776482582
+          Style: Points
+          Topic:
+            Depth: 5
+            Durability Policy: Transient Local
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /local_map
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+      Enabled: true
+      Name: Map
+    - Class: rviz_common/Group
+      Displays:
+        - Class: rviz_default_plugins/Image
+          Enabled: false
+          Max Value: 1
+          Median window: 5
+          Min Value: 0
+          Name: Image
+          Normalize Range: true
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /camera/infra2/image_rect_raw
+          Value: false
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 23.711013793945312
+            Min Value: -1.6515573263168335
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz_default_plugins/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: Intensity
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 255
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: deskew scan
+          Position Transformer: XYZ
+          Selectable: false
+          Size (Pixels): 1
+          Size (m): 0.05000000074505806
+          Style: Points
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Best Effort
+            Value: /deskew_scan
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+      Enabled: true
+      Name: Sensing
+    - Class: rviz_common/Group
+      Displays:
+        - Alpha: 1
+          Buffer Length: 1
+          Class: rviz_default_plugins/Path
+          Color: 25; 255; 0
+          Enabled: true
+          Head Diameter: 0.30000001192092896
+          Head Length: 0.20000000298023224
+          Length: 0.30000001192092896
+          Line Style: Billboards
+          Line Width: 0.10000000149011612
+          Name: odometry path
+          Offset:
+            X: 0
+            Y: 0
+            Z: 0
+          Pose Color: 255; 85; 255
+          Pose Style: None
+          Radius: 0.029999999329447746
+          Shaft Diameter: 0.10000000149011612
+          Shaft Length: 0.10000000149011612
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /odometry_path
+          Value: true
+        - Alpha: 1
+          Axes Length: 0.5
+          Axes Radius: 0.05000000074505806
+          Class: rviz_default_plugins/Pose
+          Color: 255; 25; 0
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.10000000149011612
+          Name: lidar odometry
+          Shaft Length: 1
+          Shaft Radius: 0.05000000074505806
+          Shape: Axes
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /pose_stamped
+          Value: true
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz_default_plugins/PoseWithCovariance
+          Color: 255; 25; 0
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: false
+          Head Length: 0.30000001192092896
+          Head Radius: 0.10000000149011612
+          Name: lidar odometry with covariance
+          Shaft Length: 1
+          Shaft Radius: 0.05000000074505806
+          Shape: Arrow
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /pose_with_covariance_stamped
+          Value: false
+      Enabled: true
+      Name: Odometry
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -511,36 +526,31 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz_default_plugins/Orbit
-      Distance: 83.21368408203125
+      Angle: 2.4350011348724365
+      Class: rviz_default_plugins/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Focal Point:
-        X: -6.045441150665283
-        Y: -5.50482177734375
-        Z: 5.170022487640381
-      Focal Shape Fixed Size: false
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6647971868515015
+      Scale: -2.0443148612976074
       Target Frame: map
-      Value: Orbit (rviz_default_plugins)
-      Yaw: 3.076747179031372
+      Value: TopDownOrtho (rviz_default_plugins)
+      X: 126.4987564086914
+      Y: 1.2121696472167969
     Saved: ~
 Window Geometry:
   Displays:
-    collapsed: false
+    collapsed: true
   Height: 1376
-  Hide Left Dock: false
+  Hide Left Dock: true
   Hide Right Dock: true
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd000000040000000000000156000004c2fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000004c2000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d006100670065000000035d000001a20000002800ffffff000000010000010f000004c2fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d000004c2000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000006a10000003efc0100000002fb0000000800540069006d00650100000000000006a1000002fb00fffffffb0000000800540069006d0065010000000000000450000000000000000000000545000004c200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000040000000000000156000004c7fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073000000003d000004c7000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d006100670065000000035d000001a20000002800ffffff000000010000010f0000037afc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d0000037a000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000006a100000039fc0100000002fb0000000800540069006d00650100000000000006a1000002fb00fffffffb0000000800540069006d00650100000000000004500000000000000000000006a1000004c700000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:

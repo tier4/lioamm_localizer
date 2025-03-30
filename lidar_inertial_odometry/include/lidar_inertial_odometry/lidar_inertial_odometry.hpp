@@ -80,7 +80,9 @@ public:
     crop_.setMax(max);
   }
 
-  void initialize(sensor_type::Measurement & measurement);
+  bool is_initialized() { return initialized_; }
+  void initialize(const sensor_type::Measurement & measurement);
+  bool imu_static_calibration(const std::deque<sensor_type::Imu> & imu);
 
   gtsam::NavState predict(const double stamp, std::deque<sensor_type::Imu> imu_queue);
   std::vector<Sophus::SE3d> predict(sensor_type::Measurement & measurement);
@@ -101,8 +103,11 @@ public:
 
   inline void insert_points(const sensor_type::Lidar & points) { lidar_buffer_.push_back(points); }
   inline void insert_imu(const sensor_type::Imu & imu) { imu_buffer_.push_back(imu); }
-
-  inline bool is_initialized() { return initialized_; }
+  void insert_map_pose(const sensor_type::Pose & map_pose) { map_pose_queue_.push_back(map_pose); }
+  inline void insert_initial_pose(const sensor_type::Pose & initial_pose)
+  {
+    initial_pose_buffer_.push_back(initial_pose);
+  }
 
   bool sync_measurement(sensor_type::Measurement & measurement);
 
@@ -119,12 +124,16 @@ private:
   std::shared_ptr<MapManager> map_manager_;
   std::shared_ptr<ImuIntegration> imu_integration_;
   std::shared_ptr<Optimization> optimization_;
+
+  std::mutex registration_mutex_;
   std::shared_ptr<fast_gicp::FastVGICP<PointType, PointType>> registration_;
 
   LioConfig config_;
 
   ConcurrentQueue<sensor_type::Lidar> lidar_buffer_;
   ConcurrentQueue<sensor_type::Imu> imu_buffer_;
+  ConcurrentQueue<sensor_type::Pose> map_pose_queue_;
+  ConcurrentQueue<sensor_type::Pose> initial_pose_buffer_;
 
   pcl::VoxelGrid<PointType> scan_voxel_grid_;
   pcl::CropBox<PointType> crop_;
@@ -134,6 +143,7 @@ private:
 
   PointCloudPtr local_map_;
   Eigen::Matrix4d transformation_;
+  Eigen::Vector<double, 6> imu_bias_;
   Eigen::Matrix<double, 6, 6> covariance_;
 
   bool initialized_{false};

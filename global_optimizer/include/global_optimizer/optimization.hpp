@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIDAR_INERTIAL_ODOMETRY__OPTIMIZATION_HPP_
-#define LIDAR_INERTIAL_ODOMETRY__OPTIMIZATION_HPP_
+#ifndef GLOBAL_OPTIMIZER__OPTIMIZATION_HPP_
+#define GLOBAL_OPTIMIZER__OPTIMIZATION_HPP_
 
-#include "lidar_inertial_odometry/imu_integration.hpp"
+#include "lioamm_localizer_common/sensor_type.hpp"
 
 #include <Eigen/Core>
 
@@ -35,7 +35,6 @@
 
 #include <tuple>
 
-using gtsam::symbol_shorthand::V;  // Vel   (xdot,ydot,zdot)
 using gtsam::symbol_shorthand::X;  // Pose3 (x,y,z,r,p,y)
 
 class Optimization
@@ -43,9 +42,9 @@ class Optimization
 public:
   struct OptimizationParams
   {
-    Eigen::VectorXd pose_noise;
-    Eigen::Vector3d velocity_noise;
-    Eigen::VectorXd bias_noise;
+    Eigen::VectorXd pose_prior_noise;
+    Eigen::Vector3d velocity_prior_noise;
+    Eigen::VectorXd bias_prior_noise;
     double smoother_lag;
     OptimizationParams() {}
   };
@@ -53,29 +52,32 @@ public:
   explicit Optimization(const gtsam::ISAM2Params parameter);
   ~Optimization() = default;
 
-  [[nodiscard]] Eigen::Matrix4d update(
-    const double & timestamp, const Eigen::Matrix4d & latest_frame,
-    const std::deque<sensor_type::Pose> & map_pose_queue, const gtsam::NavState state);
+  void add_map_matching_factor(const sensor_type::Pose & map_matching_pose);
+  void add_odom_factor(
+    const sensor_type::Pose & odom_pose, const bool & map_matching_is_fail = false);
+
+  [[nodiscard]] Eigen::Matrix4d update(const Eigen::Matrix4d & initial_pose);
+
   [[nodiscard]] Eigen::Matrix4d update(
     const double & timestamp, const Eigen::Matrix4d & lidar_pose_matrix,
-    const gtsam::PreintegratedImuMeasurements & imu_integration_ptr);
+    const gtsam::NavState & predict_state);
 
-  void set_initial_value(const Eigen::Matrix4d & initial_pose, const double & timestamp);
-  void set_initial_value(
-    const Eigen::Matrix4d & initial_pose, const Eigen::VectorXd & imu_bias,
-    const double & timestamp);
+  void set_initial_value(const double & timestamp, const Eigen::Matrix4d & initial_pose);
 
   [[nodiscard]] gtsam::NavState get_state() { return latest_state_; }
-  [[nodiscard]] gtsam::imuBias::ConstantBias get_bias() { return latest_imu_bias_; }
+  [[nodiscard]] gtsam::Matrix6 get_covariance() { return covariance_; }
 
 private:
   std::shared_ptr<gtsam::IncrementalFixedLagSmoother> smoother_ptr_;
-  std::shared_ptr<gtsam::ISAM2> optimizer_;
 
-  gtsam::Vector imu_bias_noise_between_;
+  gtsam::NonlinearFactorGraph graph_;
 
   gtsam::NavState latest_state_;
-  gtsam::imuBias::ConstantBias latest_imu_bias_;
+  gtsam::Matrix6 covariance_;
+
+  boost::circular_buffer<gtsam::Pose3> lidar_odom_buffer_;
+
+  gtsam::ISAM2Params parameter_;
 
   std::size_t key_;
 };
