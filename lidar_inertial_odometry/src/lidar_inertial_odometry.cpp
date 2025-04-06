@@ -14,10 +14,12 @@
 
 #include "lidar_inertial_odometry/lidar_inertial_odometry.hpp"
 
-LidarInertialOdometry::LidarInertialOdometry(LidarInertialOdometry::LioConfig config)
+LidarInertialOdometry::LidarInertialOdometry(
+  LidarInertialOdometry::LioConfig config, const bool use_local_coordinates)
 : config_(config),
   transformation_(Eigen::Matrix4d::Identity()),
-  imu_bias_(Eigen::Vector<double, 6>::Zero())
+  imu_bias_(Eigen::Vector<double, 6>::Zero()),
+  use_local_coordinates_(use_local_coordinates)
 {
   // Registration
   registration_ = std::make_shared<fast_gicp::FastVGICP<PointType, PointType>>();
@@ -135,16 +137,19 @@ void LidarInertialOdometry::initialize(const sensor_type::Measurement & measurem
   if (!imu_static_calibration(measurement.imu_queue)) {
     return;
   }
-  if (initial_pose_buffer_.empty()) {
-    return;
+
+  if (!use_local_coordinates_) {
+    if (initial_pose_buffer_.empty()) {
+      return;
+    }
+    transformation_ = initial_pose_buffer_.front().pose;
+    initial_pose_buffer_.pop_front();
+  } else {
+    transformation_.block<3, 3>(0, 0) = imu_->get_initial_orientation();
   }
 
   imu_bias_.head<3>() = imu_->get_acc_mean();
   imu_bias_.tail<3>() = imu_->get_gyro_mean();
-
-  // transformation_.block<3, 3>(0, 0) = imu_->get_initial_orientation();
-  transformation_ = initial_pose_buffer_.front().pose;
-  initial_pose_buffer_.pop_front();
 
   // Kalman Filter
   eskf_->initialize(
