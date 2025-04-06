@@ -55,7 +55,9 @@ LidarInertialOdometryNode::LidarInertialOdometryNode(const rclcpp::NodeOptions &
   config.translation_noise = this->declare_parameter<double>("translation_noise");
   config.rotation_noise = this->declare_parameter<double>("rotation_noise");
   config.gravity = this->declare_parameter<double>("gravity");
-  lio_ = std::make_shared<LidarInertialOdometry>(config);
+
+  const bool use_local_coordinates = this->declare_parameter<bool>("use_local_coordinates");
+  lio_ = std::make_shared<LidarInertialOdometry>(config, use_local_coordinates);
 
   // Point Cloud Pre-Processing
   const double scan_voxel_size = this->declare_parameter<double>("scan_voxel_size");

@@ -65,7 +65,7 @@ public:
     double imu_calibration_time;
   };
 
-  LidarInertialOdometry(LioConfig config = LioConfig());
+  LidarInertialOdometry(LioConfig config = LioConfig(), const bool use_local_coordinates = false);
   ~LidarInertialOdometry();
 
   // points preprocessing
@@ -147,6 +147,7 @@ private:
   Eigen::Matrix<double, 6, 6> covariance_;
 
   bool initialized_{false};
+  bool use_local_coordinates_;
 
   std::future<PointCloudPtr> mapping_future_;
 };
