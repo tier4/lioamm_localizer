@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MAP_MATCHER__MAP_MATCHER_HPP_
-#define MAP_MATCHER__MAP_MATCHER_HPP_
+#ifndef GLOBAL_OPTIMIZER__MAP_MATCHER_HPP_
+#define GLOBAL_OPTIMIZER__MAP_MATCHER_HPP_
 
 #include "global_optimizer/optimization.hpp"
 #include "lioamm_localizer_common/concurrent_queue.hpp"

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MAP_MATCHER__IMU_INTEGRATION_HPP_
-#define MAP_MATCHER__IMU_INTEGRATION_HPP_
+#ifndef GLOBAL_OPTIMIZER__IMU_INTEGRATION_HPP_
+#define GLOBAL_OPTIMIZER__IMU_INTEGRATION_HPP_
 
 #include "global_optimizer/sensor_type.hpp"
 
