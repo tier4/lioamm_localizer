@@ -8,6 +8,7 @@
   <include file="$(find-pkg-share global_initializer)/launch/global_initializer.launch.py"/>
   <include file="$(find-pkg-share global_optimizer)/launch/global_optimizer.launch.xml"/>
   <include file="$(find-pkg-share lidar_inertial_odometry)/launch/lidar_inertial_odometry.launch.xml">
+  <!-- <include file="$(find-pkg-share lio_iv)/launch/lio_iv_x2_glp.launch.xml"> -->
     <arg name="use_local_coordinates" value="false"/>
     <arg name="rviz" value="false"/>
   </include>

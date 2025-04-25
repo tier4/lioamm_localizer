@@ -1,0 +1,10 @@
+/home/haze/Downloads/range_image_score/build/CMakeFiles/uninstall.dir
+/home/haze/Downloads/range_image_score/build/CMakeFiles/range_image_score_uninstall.dir
+/home/haze/Downloads/range_image_score/build/CMakeFiles/range_image_score.dir
+/home/haze/Downloads/range_image_score/build/CMakeFiles/test.dir
+/home/haze/Downloads/range_image_score/build/CMakeFiles/edit_cache.dir
+/home/haze/Downloads/range_image_score/build/CMakeFiles/rebuild_cache.dir
+/home/haze/Downloads/range_image_score/build/CMakeFiles/list_install_components.dir
+/home/haze/Downloads/range_image_score/build/CMakeFiles/install.dir
+/home/haze/Downloads/range_image_score/build/CMakeFiles/install/local.dir
+/home/haze/Downloads/range_image_score/build/CMakeFiles/install/strip.dir

@@ -185,9 +185,9 @@ void LidarInertialOdometryNode::process()
 
   // Local map update
   if (lio_->update_local_map(estimated_pose, measurement.lidar_points)) {
-    // local_map_publisher_thread_ = std::thread(
-    //   &LidarInertialOdometryNode::publish_local_map, this, measurement.lidar_points.stamp);
-    // local_map_publisher_thread_.detach();
+    local_map_publisher_thread_ = std::thread(
+      &LidarInertialOdometryNode::publish_local_map, this, measurement.lidar_points.stamp);
+    local_map_publisher_thread_.detach();
   }
 
   // Publish ROS Message

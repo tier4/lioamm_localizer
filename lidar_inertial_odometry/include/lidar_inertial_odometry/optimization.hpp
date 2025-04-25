@@ -77,6 +77,8 @@ private:
   gtsam::NavState latest_state_;
   gtsam::imuBias::ConstantBias latest_imu_bias_;
 
+  boost::circular_buffer<gtsam::Pose3> odom_buffer_;
+
   std::size_t key_;
 };
 

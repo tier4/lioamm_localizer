@@ -15,7 +15,9 @@
 #ifndef GLOBAL_OPTIMIZER__MAP_MATCHER_HPP_
 #define GLOBAL_OPTIMIZER__MAP_MATCHER_HPP_
 
+#include "global_optimizer/imu_integration.hpp"
 #include "global_optimizer/optimization.hpp"
+#include "global_optimizer/outlier_detector.hpp"
 #include "lioamm_localizer_common/concurrent_queue.hpp"
 #include "lioamm_localizer_common/lioamm_localizer_utils.hpp"
 #include "lioamm_localizer_common/point_type.hpp"
@@ -60,8 +62,11 @@ private:
   void callback_map(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void callback_initial_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
   void callback_keyframe(const lioamm_localizer_msgs::msg::KeyFrame::SharedPtr msg);
+  void callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg);
 
   void preprocessing(const PointCloudPtr & input_cloud_ptr, const PointCloudPtr & output_cloud_ptr);
+
+  bool integrate_imu(const std_msgs::msg::Header::_stamp_type & sensor_header);
 
   bool get_transform(
     const std::string & target_frame, const std::string & source_frame,
@@ -74,6 +79,7 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
     initial_pose_subscriber_;
   rclcpp::Subscription<lioamm_localizer_msgs::msg::KeyFrame>::SharedPtr keyframe_subscriber_;
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscriber_;
 
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr scan_publisher_;
@@ -98,11 +104,18 @@ private:
   std::shared_ptr<pclomp::NormalDistributionsTransform<PointType, PointType>> ndt_;
 
   std::shared_ptr<Optimization> optimizer_;
+  std::shared_ptr<map_matcher::ImuIntegration> imu_integration_;
+  std::shared_ptr<OutlierDetector> detector_;
 
   nav_msgs::msg::Path global_pose_path_;
 
   bool is_initialized_{false};
+  bool is_imu_initialized_{false};
   bool map_matching_fail_{false};
+
+  double last_imu_time_stamp_;
+
+  ConcurrentQueue<sensor_type::Imu> imu_queue_;
 
   int matching_fail_num_threshold_;
   double matching_score_threshold_;

@@ -3,10 +3,13 @@
     base_frame_id: base_link
     map_frame_id: map
 
-    matching_score_threshold: 3.0
+    matching_score_threshold: 1.5
     matching_fail_num_threshold: 3
 
-    scan_voxel_size: 3.0
+    history_size: 20
+    mahalanobis_threshold: 10.0
+
+    scan_voxel_size: 2.0
     map_voxel_size: 0.2
     crop_min_x: -1.0
     crop_max_x: 1.0

@@ -16,7 +16,7 @@
 
 #include <cmath>
 
-Optimization::Optimization(const gtsam::ISAM2Params parameter) : key_(0)
+Optimization::Optimization(const gtsam::ISAM2Params parameter) : odom_buffer_(3), key_(0)
 {
   smoother_ptr_ = std::make_shared<gtsam::IncrementalFixedLagSmoother>(5.0, parameter);
   optimizer_ = std::make_shared<gtsam::ISAM2>(parameter);
@@ -36,9 +36,9 @@ void Optimization::set_initial_value(
   gtsam::Pose3 prior_pose(initial_pose);
   gtsam::Vector3 prior_velocity = gtsam::Vector3::Zero();
 
-  const auto pose_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-6);
-  const auto velocity_noise_model = gtsam::noiseModel::Isotropic::Sigma(3, 1e-6);
-  const auto bias_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-5);
+  const auto pose_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-12);
+  const auto velocity_noise_model = gtsam::noiseModel::Isotropic::Sigma(3, 1e-1);
+  const auto bias_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-3);
 
   gtsam::Values initial_values;
   initial_values.insert(X(key_), prior_pose);
@@ -78,8 +78,7 @@ Eigen::Matrix4d Optimization::update(
   // IMU bias factor
   gtsam::BetweenFactor<gtsam::imuBias::ConstantBias> imu_bias_factor(
     B(key_ - 1), B(key_), gtsam::imuBias::ConstantBias(),
-    gtsam::noiseModel::Diagonal::Sigmas(
-      std::sqrt(imu_integration_ptr.deltaTij()) * imu_bias_noise_between_));
+    gtsam::noiseModel::Isotropic::Sigma(6, 1e-3));
 
   // add IMU factor
   graph.add(imu_factor);
@@ -87,9 +86,18 @@ Eigen::Matrix4d Optimization::update(
 
   gtsam::Pose3 lidar_pose(lidar_pose_matrix);
 
-  gtsam::PriorFactor<gtsam::Pose3> lidar_prior_factor(
-    X(key_), lidar_pose, gtsam::noiseModel::Isotropic::Precision(6, 1e6));
+  auto odom_noise = gtsam::noiseModel::Diagonal::Variances(
+    (gtsam::Vector(6) << 1e-6, 1e-6, 1e-6, 1e-4, 1e-4, 1e-4).finished());
+  gtsam::PriorFactor<gtsam::Pose3> lidar_prior_factor(X(key_), lidar_pose, odom_noise);
   graph.add(lidar_prior_factor);
+
+  // auto odom_noise = gtsam::noiseModel::Diagonal::Variances(
+  //   (gtsam::Vector(6) << 1e-6, 1e-6, 1e-6, 1e-4, 1e-4, 1e-4).finished());
+  // auto previous_odom = odom_buffer_.back();
+  // gtsam::BetweenFactor<gtsam::Pose3> lidar_relative_factor(
+  //   X(key_ - 1), X(key_), previous_odom.between(lidar_pose), odom_noise);
+  // graph.add(lidar_relative_factor);
+  odom_buffer_.push_back(lidar_pose);
 
   auto predict_state = imu_integration_ptr.predict(latest_state_, latest_imu_bias_);
 

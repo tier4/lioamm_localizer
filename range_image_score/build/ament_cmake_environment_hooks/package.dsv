@@ -1,0 +1,4 @@
+source;share/range_image_score/local_setup.bash
+source;share/range_image_score/local_setup.dsv
+source;share/range_image_score/local_setup.sh
+source;share/range_image_score/local_setup.zsh

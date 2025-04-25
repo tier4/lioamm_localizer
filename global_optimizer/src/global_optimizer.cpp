@@ -60,6 +60,27 @@ GlobalOptimizer::GlobalOptimizer(const rclcpp::NodeOptions & options)
   // smoother_parameters.factorization = gtsam::ISAM2Params::Factorization::CHOLESKY;
   optimizer_ = std::make_shared<Optimization>(smoother_parameters);
 
+  // Initialize IMU Pre-Integration
+  gtsam::ISAM2Params imu_integ_parameters;
+  imu_integ_parameters.relinearizeThreshold = 0.1;
+  imu_integ_parameters.relinearizeSkip = 1;
+  map_matcher::ImuIntegration::ImuConfig imu_config;
+  imu_config.accel_noise_sigma = 0.05;
+  imu_config.gyro_noise_sigma = 0.02;
+  imu_config.pose_noise = 1e-2;
+  imu_config.velocity_noise = 1e4;
+  imu_config.bias_noise = 1e-5;
+  imu_config.gravity = -9.80665;
+  imu_config.reset_graph_key = 100;
+  Eigen::VectorXd imu_bias(Eigen::VectorXd::Zero(6));
+  imu_integration_ =
+    std::make_shared<map_matcher::ImuIntegration>(imu_config, imu_bias, imu_integ_parameters);
+  imu_integration_->initialize(transformation_.cast<double>(), Eigen::VectorXd::Zero(6));
+
+  const int history_size = this->declare_parameter<int>("history_size");
+  const double mahalanobis_threshold = this->declare_parameter<double>("mahalanobis_threshold");
+  detector_ = std::make_shared<OutlierDetector>(history_size, mahalanobis_threshold);
+
   broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
   map_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
@@ -71,6 +92,8 @@ GlobalOptimizer::GlobalOptimizer(const rclcpp::NodeOptions & options)
       std::bind(&GlobalOptimizer::callback_initial_pose, this, std::placeholders::_1));
   keyframe_subscriber_ = this->create_subscription<lioamm_localizer_msgs::msg::KeyFrame>(
     "keyframe", 5, std::bind(&GlobalOptimizer::callback_keyframe, this, std::placeholders::_1));
+  imu_subscriber_ = this->create_subscription<sensor_msgs::msg::Imu>(
+    "imu_raw", 10, std::bind(&GlobalOptimizer::callback_imu, this, std::placeholders::_1));
 
   pose_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("map_pose", 10);
   scan_matching_pose_publisher_ =
@@ -98,6 +121,25 @@ void GlobalOptimizer::callback_keyframe(const lioamm_localizer_msgs::msg::KeyFra
 
   const auto lidar_time_stamp = msg->header.stamp;
 
+  // if (integrate_imu(lidar_time_stamp)) {
+  //   RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to integrate imu measurement.");
+  //   // return;
+  //   const auto [predict_state, predict_bias] =
+  //     imu_integration_->predict(transformation_.cast<double>());
+  //   optimizer_->add_velocity_factor(predict_state);
+  // }
+
+  // TODO: check odom drift
+  sensor_type::Pose odom_pose;
+  odom_pose.stamp = rclcpp::Time(lidar_time_stamp).seconds();
+  odom_pose.pose = lioamm_localizer_utils::convert_pose_to_matrix(msg->pose).cast<double>();
+
+  // IMU
+  // const auto [predict_state, predict_bias] =
+  //   imu_integration_->predict(transformation_.cast<double>());
+  // transformation_ = predict_state.pose().matrix().cast<float>();
+  // optimizer_->add_velocity_factor(predict_state);
+
   PointCloudPtr input_cloud(new PointCloud);
   PointCloudPtr preprocessing_cloud(new PointCloud);
   pcl::fromROSMsg(msg->points, *input_cloud);
@@ -107,7 +149,7 @@ void GlobalOptimizer::callback_keyframe(const lioamm_localizer_msgs::msg::KeyFra
   ndt_->setInputSource(preprocessing_cloud);
 
   PointCloudPtr aligned_cloud(new PointCloud);
-  ndt_->align(*aligned_cloud, transformation_);
+  ndt_->align(*aligned_cloud, transformation_.cast<float>());
   if (!ndt_->hasConverged()) {
     RCLCPP_ERROR_STREAM(this->get_logger(), "Not Converged.");
     return;
@@ -128,7 +170,11 @@ void GlobalOptimizer::callback_keyframe(const lioamm_localizer_msgs::msg::KeyFra
   } else {
     fail_num_ = 0;
   }
+  map_matching_fail_ = (matching_fail_num_threshold_ <= fail_num_);
+  auto pose = scan_matching_result.pose.block<3, 1>(0, 3);
+  std::cout << "map pose = (" << pose.x() << ", " << pose.y() << ")" << std::endl;
   if (!is_matching_score_low) {
+    // if (!detector_->is_outlier(scan_matching_result.pose)) {
     optimizer_->add_map_matching_factor(scan_matching_result);
     geometry_msgs::msg::PoseStamped scan_matching_pose_msgs;
     scan_matching_pose_msgs.header.frame_id = map_frame_id_;
@@ -136,23 +182,20 @@ void GlobalOptimizer::callback_keyframe(const lioamm_localizer_msgs::msg::KeyFra
     scan_matching_pose_msgs.pose =
       lioamm_localizer_utils::convert_matrix_to_pose(scan_matching_pose);
     scan_matching_pose_publisher_->publish(scan_matching_pose_msgs);
+    // }
   } else {
+    // optimizer_->update_score_history(score_tp);
     RCLCPP_ERROR_STREAM(this->get_logger(), "Matching failed.");
   }
-
-  map_matching_fail_ = (matching_fail_num_threshold_ <= fail_num_);
-
-  // TODO: check odom drift
-  sensor_type::Pose odom_pose;
-  odom_pose.stamp = rclcpp::Time(lidar_time_stamp).seconds();
-  odom_pose.pose = lioamm_localizer_utils::convert_pose_to_matrix(msg->pose).cast<double>();
-  optimizer_->add_odom_factor(odom_pose, map_matching_fail_);
+  auto odom_diff = optimizer_->add_odom_factor(odom_pose, map_matching_fail_);
 
   auto result = optimizer_->update(transformation_.cast<double>());
   transformation_ = result.cast<float>();
+  auto opt_pose = transformation_.block<3, 1>(0, 3);
+  std::cout << "optimization pose = (" << opt_pose.x() << ", " << opt_pose.y() << ")" << std::endl;
 
   geometry_msgs::msg::PoseStamped estimated_pose_msg;
-  estimated_pose_msg.header.stamp = lidar_time_stamp;
+  estimated_pose_msg.header.stamp = this->now();
   estimated_pose_msg.header.frame_id = map_frame_id_;
   estimated_pose_msg.pose = lioamm_localizer_utils::convert_matrix_to_pose(result.cast<float>());
   pose_publisher_->publish(estimated_pose_msg);
@@ -161,16 +204,45 @@ void GlobalOptimizer::callback_keyframe(const lioamm_localizer_msgs::msg::KeyFra
   PointCloudPtr transformed_cloud(new PointCloud);
   pcl::transformPointCloud(*input_cloud, *transformed_cloud, transformation_);
   pcl::toROSMsg(*transformed_cloud, filtered_scan_msg);
-  filtered_scan_msg.header.stamp = lidar_time_stamp;
+  filtered_scan_msg.header.stamp = this->now();
   filtered_scan_msg.header.frame_id = map_frame_id_;
   scan_publisher_->publish(filtered_scan_msg);
 
   global_pose_path_.header.frame_id = map_frame_id_;
-  global_pose_path_.header.stamp = lidar_time_stamp;
+  global_pose_path_.header.stamp = this->now();
   global_pose_path_.poses.emplace_back(estimated_pose_msg);
   global_pose_path_publisher_->publish(global_pose_path_);
 
-  publish_tf(estimated_pose_msg.pose, lidar_time_stamp, map_frame_id_, base_frame_id_);
+  publish_tf(estimated_pose_msg.pose, this->now(), map_frame_id_, base_frame_id_);
+}
+
+void GlobalOptimizer::callback_imu(const sensor_msgs::msg::Imu::SharedPtr msg)
+{
+  geometry_msgs::msg::TransformStamped base_to_imu;
+  if (!get_transform(base_frame_id_, msg->header.frame_id, base_to_imu)) {
+    RCLCPP_ERROR_STREAM(this->get_logger(), "Cannot get transform base_link to imu_link.");
+    return;
+  }
+
+  Eigen::Transform<double, 3, Eigen::Affine> transform_matrix =
+    lioamm_localizer_utils::get_eigen_transform(base_to_imu);
+
+  sensor_type::Imu imu_data;
+  imu_data.stamp = msg->header.stamp.sec + msg->header.stamp.nanosec / 1e9;
+  imu_data.linear_acceleration =
+    transform_matrix *
+    Eigen::Vector3d(
+      msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
+  imu_data.angular_velocity =
+    transform_matrix *
+    Eigen::Vector3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
+
+  // imu_queue_.push_back(imu_data);
+
+  if (!is_imu_initialized_) {
+    last_imu_time_stamp_ = imu_data.stamp;
+    is_imu_initialized_ = true;
+  }
 }
 
 void GlobalOptimizer::callback_map(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
@@ -198,6 +270,7 @@ void GlobalOptimizer::callback_initial_pose(
 
   optimizer_->set_initial_value(
     rclcpp::Time(msg->header.stamp).seconds(), transformation_.cast<double>());
+  imu_integration_->initialize(transformation_.cast<double>(), Eigen::VectorXd::Zero(6));
 }
 
 void GlobalOptimizer::preprocessing(
@@ -210,6 +283,50 @@ void GlobalOptimizer::preprocessing(
   crop_.setNegative(true);
   crop_.setInputCloud(downsampling_cloud);
   crop_.filter(*output_cloud_ptr);
+}
+
+bool GlobalOptimizer::integrate_imu(const std_msgs::msg::Header::_stamp_type & sensor_time_stamp)
+{
+  if (imu_queue_.empty()) return false;
+
+  const double sensor_time_stamp_sec = sensor_time_stamp.sec + sensor_time_stamp.nanosec / 1e9;
+
+  Eigen::Vector3d linear_acceleration = Eigen::Vector3d::Zero();
+  Eigen::Vector3d angular_velocity = Eigen::Vector3d::Zero();
+  while (!imu_queue_.empty()) {
+    auto imu = imu_queue_.front();
+    if (sensor_time_stamp_sec < imu.stamp) {
+      break;
+    }
+    imu_queue_.pop_front();
+
+    // integration
+    const double dt = imu.stamp - last_imu_time_stamp_;
+    if (dt <= 0.0) {
+      continue;
+    }
+
+    linear_acceleration = imu.linear_acceleration;
+    angular_velocity = imu.angular_velocity;
+
+    imu_integration_->get_integrated_measurements().integrateMeasurement(
+      linear_acceleration, angular_velocity, dt);
+
+    last_imu_time_stamp_ = imu.stamp;
+  }
+
+  const double dt = sensor_time_stamp_sec - last_imu_time_stamp_;
+  if (0.0 < dt) {
+    if (!imu_queue_.empty()) {
+      auto imu = imu_queue_.front();
+      linear_acceleration = imu.linear_acceleration;
+      angular_velocity = imu.angular_velocity;
+    }
+    imu_integration_->get_integrated_measurements().integrateMeasurement(
+      linear_acceleration, angular_velocity, dt);
+  }
+
+  return true;
 }
 
 void GlobalOptimizer::publish_tf(

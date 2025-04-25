@@ -1,0 +1,20 @@
+<launch>
+  <arg name="param_file" default="$(find-pkg-share range_image_score)/config/range_image_score.param.yaml"/>
+
+  <arg name="pose_topic" default="/map_pose"/>
+  <!--arg name="points_topic" default="/sensing/lidar/concatenated/pointcloud"/-->
+  <arg name="points_topic" default="deskew_scan"/>
+  <!--arg name="points_topic" default="/sensing/lidar/top/pointcloud_raw_ex"/-->
+  <!-- arg name="points_topic" default="/localization/util/downsample/pointcloud"/ -->
+  <arg name="map_topic" default="/map"/>
+
+  <node pkg="range_image_score" exec="range_image_score" name="range_image_score_node" output="screen">
+    <remap from="pose" to="$(var pose_topic)"/>
+    <remap from="points_raw" to="$(var points_topic)"/>
+    <remap from="points_map" to="$(var map_topic)"/>
+
+    <param from="$(var param_file)"/>
+  </node>
+
+  <!--node pkg="rviz2" exec="rviz2" name="rviz2" args="-d $(find-pkg-share range_image_score)/rviz/range_image_score.rviz"/-->
+</launch>

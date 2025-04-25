@@ -15,7 +15,7 @@
 #ifndef GLOBAL_OPTIMIZER__IMU_INTEGRATION_HPP_
 #define GLOBAL_OPTIMIZER__IMU_INTEGRATION_HPP_
 
-#include "global_optimizer/sensor_type.hpp"
+#include "lioamm_localizer_common/sensor_type.hpp"
 
 #include <Eigen/Core>
 

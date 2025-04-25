@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>range_image_score</name>
+  <version>0.0.0</version>
+  <description>The range_image_score package</description>
+  <maintainer email="ryu.yamamoto@tier4.jp">RyuYamamoto</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rosbag2_cpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+  <depend>tf2_ros</depend>
+  <depend>pcl_ros</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tier4_debug_msgs</depend>
+
+  <exec_depend>launch_ros</exec_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    fov_up: 25.0
+
+    fov_down: -25.0
+
+    height: 50
+
+    width: 360
+
+    leaf_size: 0.0
+
+    distance_threshold: 60.0
+
+    #base_frame_id: velodyne_top
+    #base_frame_id: pandar_40p_right
+    base_frame_id: base_link
+
+    diff_threshold: 0.5

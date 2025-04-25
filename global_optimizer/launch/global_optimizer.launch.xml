@@ -1,6 +1,7 @@
 <launch>
   <arg name="global_optimizer_config_path" default="$(find-pkg-share global_optimizer)/config/global_optimizer.params.yaml"/>
 
+  <set_parameter name="use_sim_time" value="true" />
   <node pkg="global_optimizer" exec="global_optimizer_node" name="global_optimizer" output="screen">
     <!-- <remap from="points_raw" to="/os1_cloud_node/points"/> -->
     <!-- <remap from="points_raw" to="/sensing/lidar/left_upper/pointcloud_raw"/> -->
