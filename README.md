@@ -17,11 +17,16 @@ Please clone and build gtsam.
 
 ```bash
 git clone https://github.com/borglab/gtsam.git
-cd gtsam
+cd gtsam && git checkout 4.2a9
 mkdir build && cd build
-cmake ..
+cmake .. -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF \
+         -DGTSAM_BUILD_TESTS=OFF \
+         -DGTSAM_WITH_TBB=OFF \
+         -DGTSAM_USE_SYSTEM_EIGEN=ON \
+         -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF
 make
 sudo make install
+sudo ldconfig
 ```
 
 ### 2. Build lioamm_localizer
